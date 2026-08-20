@@ -90,6 +90,12 @@ kbd { display: inline-grid; place-items: center; width: 21px; height: 21px; marg
 .stat-card span { display: block; margin-bottom: 18px; color: var(--muted); font-family: "DM Mono", monospace; font-size: 10px; text-transform: uppercase; }
 .stat-card strong { color: var(--green); font-family: "DM Mono", monospace; font-size: 25px; font-weight: 500; }
 .leaderboard-section { max-width: 850px; }
+.practice-section { max-width: 850px; margin-bottom: 70px; }
+.section-note { color: var(--muted); font-family: "DM Mono", monospace; font-size: 10px; text-transform: uppercase; }
+.practice-levels { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-top: 18px; }
+.practice-level { min-height: 52px; padding: 10px 8px; color: var(--green); background: var(--white); border: 1px solid var(--line); font-family: "DM Mono", monospace; font-size: 10px; text-align: left; transition: border-color .2s, background .2s, transform .2s; }
+.practice-level span { float: right; color: var(--orange); font-size: 15px; }
+.practice-level:hover { border-color: var(--green); background: #f4f7f1; transform: translateY(-2px); }
 .section-heading { align-items: center; margin-bottom: 18px; }
 .section-heading h3 { margin: 0; font-size: 28px; letter-spacing: -.05em; }
 .challenge-button { padding: 12px 15px; color: var(--white); background: var(--green); }
@@ -146,6 +152,9 @@ kbd { display: inline-grid; place-items: center; width: 21px; height: 21px; marg
   .stat-card span { font-size: 8px; }
   .stat-card strong { font-size: 18px; }
   .section-heading { align-items: start; flex-direction: column; }
+  .practice-section { margin-bottom: 55px; }
+  .section-note { font-size: 9px; }
+  .practice-levels { grid-template-columns: repeat(3, 1fr); }
   .leader-row { grid-template-columns: 28px 1fr; gap: 7px; }
   .leader-row > span:not(.leader-rank), .leader-row b { grid-column: 2; text-align: left; }
   .modal-panel { padding: 38px 25px; }

@@ -8,6 +8,22 @@ const flagCatalog = [
   ["gw", "Guinea-Bissau"], ["gy", "Guyana"], ["hn", "Honduras"], ["hu", "Ungarn"], ["ir", "Iran"], ["iq", "Irak"], ["il", "Israel"], ["ci", "Elfenbeinküste"], ["jo", "Jordanien"], ["kz", "Kasachstan"], ["kw", "Kuwait"], ["kg", "Kirgisistan"], ["la", "Laos"], ["lv", "Lettland"], ["lb", "Libanon"], ["ls", "Lesotho"], ["lr", "Liberia"], ["ly", "Libyen"], ["li", "Liechtenstein"], ["lt", "Litauen"], ["lu", "Luxemburg"], ["mg", "Madagaskar"], ["mw", "Malawi"], ["mv", "Malediven"], ["ml", "Mali"], ["mt", "Malta"], ["mh", "Marshallinseln"], ["mr", "Mauretanien"], ["mu", "Mauritius"], ["md", "Moldau"], ["mc", "Monaco"], ["mn", "Mongolei"], ["me", "Montenegro"], ["mz", "Mosambik"], ["mm", "Myanmar"], ["na", "Namibia"], ["nr", "Nauru"], ["np", "Nepal"], ["ni", "Nicaragua"], ["ne", "Niger"], ["ng", "Nigeria"], ["mk", "Nordmazedonien"], ["om", "Oman"], ["pk", "Pakistan"], ["pw", "Palau"], ["ps", "Palästina"], ["pg", "Papua-Neuguinea"], ["pl", "Polen"], ["qa", "Katar"], ["ro", "Rumänien"], ["ru", "Russland"], ["rw", "Ruanda"], ["kn", "St. Kitts und Nevis"], ["lc", "St. Lucia"], ["vc", "St. Vincent und die Grenadinen"], ["ws", "Samoa"], ["sm", "San Marino"], ["st", "São Tomé und Príncipe"], ["sa", "Saudi-Arabien"], ["sn", "Senegal"], ["rs", "Serbien"], ["sl", "Sierra Leone"], ["sk", "Slowakei"], ["si", "Slowenien"], ["sb", "Salomonen"], ["so", "Somalia"], ["lk", "Sri Lanka"], ["sd", "Sudan"], ["sr", "Suriname"], ["sy", "Syrien"], ["tj", "Tadschikistan"], ["tz", "Tansania"], ["tl", "Osttimor"], ["tg", "Togo"], ["to", "Tonga"], ["tn", "Tunesien"], ["tm", "Turkmenistan"], ["tv", "Tuvalu"], ["ug", "Uganda"], ["ua", "Ukraine"], ["ae", "Vereinigte Arabische Emirate"], ["gb", "Vereinigtes Königreich"], ["uz", "Usbekistan"], ["vu", "Vanuatu"], ["va", "Vatikanstadt"], ["ve", "Venezuela"], ["ye", "Jemen"], ["zm", "Sambia"], ["zw", "Simbabwe"], ["xk", "Kosovo"], ["ax", "Åland"], ["as", "Amerikanisch-Samoa"], ["ai", "Anguilla"], ["aq", "Antarktis"], ["aw", "Aruba"], ["bm", "Bermuda"], ["bq", "Bonaire, Sint Eustatius und Saba"], ["vg", "Britische Jungferninseln"], ["ky", "Kaimaninseln"], ["cx", "Weihnachtsinsel"], ["cc", "Kokosinseln"], ["ck", "Cookinseln"], ["cw", "Curaçao"], ["fk", "Falklandinseln"], ["fo", "Färöer"], ["gf", "Französisch-Guayana"], ["pf", "Französisch-Polynesien"], ["gi", "Gibraltar"], ["gl", "Grönland"], ["gu", "Guam"], ["gg", "Guernsey"], ["hk", "Hongkong"], ["im", "Isle of Man"], ["je", "Jersey"], ["mo", "Macau"], ["mq", "Martinique"], ["ms", "Montserrat"], ["nc", "Neukaledonien"], ["nu", "Niue"], ["nf", "Norfolkinsel"], ["mp", "Nördliche Marianen"], ["pn", "Pitcairninseln"], ["pr", "Puerto Rico"], ["re", "Réunion"], ["sh", "St. Helena"], ["mf", "Saint-Martin"], ["pm", "Saint-Pierre und Miquelon"], ["sx", "Sint Maarten"], ["sj", "Spitzbergen und Jan Mayen"], ["tw", "Taiwan"], ["tk", "Tokelau"], ["tc", "Turks- und Caicosinseln"], ["vi", "Amerikanische Jungferninseln"], ["wf", "Wallis und Futuna"], ["eh", "Westsahara"], ["yt", "Mayotte"], ["um", "United States Minor Outlying Islands"], ["bv", "Bouvetinsel"], ["io", "Britisches Territorium im Indischen Ozean"], ["bl", "Saint-Barthélemy"], ["gp", "Guadeloupe"], ["tf", "Französische Süd- und Antarktisgebiete"], ["hm", "Heard und McDonaldinseln"], ["ki", "Kiribati"], ["gs", "Südgeorgien und die Südlichen Sandwichinseln"], ["ta", "Tristan da Cunha"], ["dg", "Diego Garcia"]
 ].map(([code, country]) => ({ code, country }));
 
+const recognitionOrder = [
+  "be", "bg", "hr", "cz", "ge", "gh", "gt", "hu", "al", "dz", "ad", "ao", "ag", "am", "az", "bs", "bh", "bd", "bb", "by", "bz", "bj", "bt", "ba", "bw", "bn", "bf", "bi", "cv", "kh", "cm", "cf", "td", "km", "cg", "cd", "cy", "dj", "dm", "sv", "gq", "er", "ee", "sz", "et", "fj", "ga", "gm", "gd", "gn", "gw", "gy", "hn", "ir", "iq", "il", "ci", "jo", "kz", "kw", "kg", "la", "lv", "lb", "ls", "lr", "ly", "li", "lt", "lu", "mg", "mw", "mv", "ml", "mt", "mh", "mr", "mu", "md", "mc", "mn", "me", "mz", "mm", "na", "nr", "np", "ni", "ne", "ng", "mk", "om", "pk", "pw", "ps", "pg", "pl", "qa", "ro", "ru", "rw", "kn", "lc", "vc", "ws", "sm", "st", "sa", "sn", "rs", "sl", "sk", "si", "sb", "so", "lk", "sd", "sr", "sy", "tj", "tz", "tl", "tg", "to", "tn", "tm", "tv", "ug", "ua", "ae", "gb", "uz", "vu", "va", "ve", "ye", "zm", "zw", "xk", "ax", "as", "ai", "aq", "aw", "bm", "bq", "vg", "ky", "cx", "cc", "ck", "cw", "fk", "fo", "gf", "pf", "gi", "gl", "gu", "gg", "hk", "im", "je", "mo", "mq", "ms", "nc", "nu", "nf", "mp", "pn", "pr", "re", "sh", "mf", "pm", "sx", "sj", "tw", "tk", "tc", "vi", "wf", "eh", "yt", "um", "bv", "io", "bl", "gp", "tf", "hm", "ki", "gs", "ta", "dg"
+];
+const recognitionRank = new Map(recognitionOrder.map((code, index) => [code, index]));
+const sortedDifficultyGroup = (group) => [...group].sort((first, second) => {
+  const firstRank = recognitionRank.get(first.code) ?? Number.MAX_SAFE_INTEGER;
+  const secondRank = recognitionRank.get(second.code) ?? Number.MAX_SAFE_INTEGER;
+  if (firstRank !== secondRank) return firstRank - secondRank;
+  return first.country.length - second.country.length;
+});
+const difficultyCatalog = flagCatalog.slice(49).sort((first, second) => (recognitionRank.get(first.code) ?? Number.MAX_SAFE_INTEGER) - (recognitionRank.get(second.code) ?? Number.MAX_SAFE_INTEGER));
+const orderedFlagCatalog = [
+  ...flagCatalog.slice(0, 49),
+  ...Array.from({ length: 4 }, (_, groupIndex) => sortedDifficultyGroup(difficultyCatalog.slice(groupIndex * 49, (groupIndex + 1) * 49))).flat()
+];
+
 const flagImage = document.querySelector("#flag-image");
 const answersElement = document.querySelector("#answers");
 const scoreElement = document.querySelector("#score");
@@ -30,6 +46,7 @@ let levelFailed = false;
 let answered = false;
 let levelQuestions = [];
 let currentUser = null;
+let practiceMode = false;
 
 function shuffle(items) {
   return [...items].sort(() => Math.random() - 0.5);
@@ -37,7 +54,7 @@ function shuffle(items) {
 
 function startLevel() {
   const firstFlagIndex = (level - 1) * QUESTIONS_PER_LEVEL;
-  levelQuestions = flagCatalog.slice(firstFlagIndex, firstFlagIndex + QUESTIONS_PER_LEVEL).map((question) => ({
+  levelQuestions = orderedFlagCatalog.slice(firstFlagIndex, firstFlagIndex + QUESTIONS_PER_LEVEL).map((question) => ({
     ...question,
     options: getOptions(question)
   }));
@@ -49,7 +66,7 @@ function startLevel() {
 function getOptions(question) {
   const difficultyStart = Math.floor((level - 1) / 7) * 49;
   const difficultyEnd = difficultyStart + 49;
-  const sameDifficultyFlags = flagCatalog.slice(difficultyStart, difficultyEnd);
+  const sameDifficultyFlags = orderedFlagCatalog.slice(difficultyStart, difficultyEnd);
   const distractors = shuffle(sameDifficultyFlags.filter((flag) => flag.code !== question.code))
     .slice(0, 3)
     .map((flag) => flag.country);
@@ -113,17 +130,25 @@ function showLevelResult() {
   resultMessage.textContent = passed
     ? "Alle sieben Antworten waren richtig."
     : "Für den Aufstieg müssen alle sieben Antworten richtig sein.";
-  if (currentUser) {
+  if (currentUser && !practiceMode) {
     currentUser.rounds += 1;
     if (passed) currentUser.highscore = Math.max(currentUser.highscore, level);
     currentUser.level = passed ? Math.min(MAX_LEVEL, level + 1) : level;
     saveCurrentUser();
     updateDashboard();
   }
-  restartButton.textContent = passed && level === MAX_LEVEL ? "Nochmal spielen ↗" : passed ? "Nächstes Level ↗" : "Level wiederholen ↗";
+  restartButton.textContent = practiceMode ? "Zurück zum Profil ↗" : passed && level === MAX_LEVEL ? "Nochmal spielen ↗" : passed ? "Nächstes Level ↗" : "Level wiederholen ↗";
 }
 
 restartButton.addEventListener("click", () => {
+  if (practiceMode) {
+    practiceMode = false;
+    resultView.classList.add("hidden");
+    quizView.classList.add("hidden");
+    dashboard.classList.remove("hidden");
+    updateDashboard();
+    return;
+  }
   const wasPassed = !levelFailed;
   if (wasPassed && level < MAX_LEVEL) level += 1;
   quizView.classList.remove("hidden");
@@ -157,6 +182,7 @@ const profileName = document.querySelector("#profile-name");
 const profileProgress = document.querySelector("#profile-progress");
 const profileScore = document.querySelector("#profile-score");
 const profileRounds = document.querySelector("#profile-rounds");
+const practiceLevels = document.querySelector("#practice-levels");
 const leaderboard = document.querySelector("#leaderboard");
 let authMode = "login";
 
@@ -201,7 +227,28 @@ function updateDashboard() {
   profileScore.textContent = currentUser.highscore;
   profileRounds.textContent = currentUser.rounds;
   dashboard.classList.remove("hidden");
+  renderPracticeLevels();
   renderLeaderboard();
+}
+
+function renderPracticeLevels() {
+  const completedLevels = Math.min(MAX_LEVEL, Math.max(0, currentUser.level - 1));
+  practiceLevels.innerHTML = completedLevels
+    ? Array.from({ length: completedLevels }, (_, index) => `<button class="practice-level" type="button" data-level="${index + 1}">Level ${String(index + 1).padStart(2, "0")} <span>↗</span></button>`).join("")
+    : `<p class="empty-state">Schließe dein erstes Level ab, um es hier üben zu können.</p>`;
+  practiceLevels.querySelectorAll(".practice-level").forEach((button) => button.addEventListener("click", () => startPractice(Number(button.dataset.level))));
+}
+
+function startPractice(practiceLevel) {
+  practiceMode = true;
+  level = practiceLevel;
+  levelFailed = false;
+  answered = false;
+  resultView.classList.add("hidden");
+  dashboard.classList.add("hidden");
+  quizView.classList.remove("hidden");
+  startLevel();
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function renderLeaderboard() {
@@ -217,6 +264,7 @@ function restoreSession() {
   if (!user) return;
   currentUser = user;
   level = Math.min(MAX_LEVEL, Math.max(1, user.level));
+  startLevel();
   updateDashboard();
   userChip.classList.remove("hidden");
   loginButton.classList.add("hidden");
@@ -227,6 +275,7 @@ document.querySelectorAll(".auth-tab").forEach((tab) => tab.addEventListener("cl
 loginButton.addEventListener("click", () => { setAuthMode("login"); openModal(authModal); });
 logoutButton.addEventListener("click", () => {
   currentUser = null;
+  practiceMode = false;
   localStorage.removeItem("flaggenquiz-current");
   userChip.classList.add("hidden");
   loginButton.classList.remove("hidden");
@@ -238,7 +287,17 @@ logoutButton.addEventListener("click", () => {
 document.querySelector("#auth-close").addEventListener("click", () => closeModal(authModal));
 document.querySelector("#password-close").addEventListener("click", () => closeModal(passwordModal));
 document.querySelector("#password-button").addEventListener("click", () => { passwordMessage.textContent = ""; passwordForm.reset(); openModal(passwordModal); });
-document.querySelector("#challenge-button").addEventListener("click", () => { resultEyebrow.textContent = "Lokale Challenge"; resultTitle.innerHTML = "Schlag deine<br><em>Mitspieler.</em>"; resultMessage.textContent = "Spiele eine Runde und setze dich an die Spitze der Rangliste."; quizView.classList.remove("hidden"); dashboard.classList.add("hidden"); window.scrollTo({ top: 0, behavior: "smooth" }); });
+document.querySelector("#challenge-button").addEventListener("click", () => {
+  practiceMode = false;
+  level = currentUser ? currentUser.level : level;
+  levelFailed = false;
+  answered = false;
+  resultView.classList.add("hidden");
+  dashboard.classList.add("hidden");
+  quizView.classList.remove("hidden");
+  startLevel();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+});
 
 authForm.addEventListener("submit", async (event) => {
   event.preventDefault();
