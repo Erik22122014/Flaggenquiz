@@ -19,7 +19,7 @@
       </a>
       <div class="topbar-meta">
         <span class="live-dot" aria-hidden="true"></span>
-        <span>10 Fragen · Weltweit</span>
+        <span>25 Level · 7 Fragen pro Level</span>
       </div>
     </header>
 
@@ -30,15 +30,15 @@
           <h1>Welche Flagge<br><em>ist das?</em></h1>
         </div>
         <div class="score-block">
-          <span class="score-label">Punkte</span>
-          <strong id="score">00</strong>
+          <span class="score-label">Level</span>
+          <strong id="score">01</strong>
         </div>
       </div>
 
       <div class="progress-row">
-        <span id="question-count">Frage 01 / 10</span>
-        <div class="progress-track" aria-label="Quiz-Fortschritt"><span id="progress-bar"></span></div>
-        <span id="streak">0er Serie</span>
+        <span id="question-count">Frage 01 / 07</span>
+        <div class="progress-track" aria-label="Fragenfortschritt"><span id="progress-bar"></span></div>
+        <span id="level-count">Level 01 / 25</span>
       </div>
 
       <div class="quiz-card">
@@ -50,21 +50,20 @@
           <span class="flag-caption">Tipp: Achte auf die Details.</span>
         </div>
         <div class="answers" id="answers" role="group" aria-label="Antwortmöglichkeiten"></div>
-        <div class="feedback" id="feedback" aria-live="polite"></div>
       </div>
 
       <footer class="quiz-footer">
         <span class="keyboard-hint"><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd> zum Antworten</span>
-        <button class="skip-button" id="skip-button" type="button">Überspringen <span aria-hidden="true">↗</span></button>
+        <span class="quiz-rule">Alle 7 Antworten müssen stimmen.</span>
       </footer>
     </section>
 
     <section class="result-view hidden" id="result-view" aria-live="polite">
-      <p class="eyebrow">Quiz beendet</p>
-      <h2>Starke<br><em>Weltkenntnis.</em></h2>
-      <div class="result-score"><strong id="final-score">0</strong><span>/ 10 Punkte</span></div>
-      <p id="result-message">Du hast dich souverän durch die Weltkarten gespielt.</p>
-      <button class="primary-button" id="restart-button" type="button">Noch eine Runde <span aria-hidden="true">↗</span></button>
+      <p class="eyebrow" id="result-eyebrow">Level geschafft</p>
+      <h2 id="result-title">Weiter zur<br><em>nächsten Stufe.</em></h2>
+      <div class="result-score"><strong id="final-score">01</strong><span id="result-detail">/ 25 Level</span></div>
+      <p id="result-message">Du hast alle sieben Fragen richtig beantwortet.</p>
+      <button class="primary-button" id="restart-button" type="button">Weiter <span aria-hidden="true">↗</span></button>
     </section>
   </main>
   <script src="script.js"></script>
