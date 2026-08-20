@@ -1,0 +1,11 @@
+# Betriebssystem
+.DS_Store
+Thumbs.db
+
+# VS Code
+.vscode/
+
+# Lokale Abhängigkeiten und Builds
+node_modules/
+dist/
+build/
