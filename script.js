@@ -29,6 +29,7 @@ let questionIndex = 0;
 let levelFailed = false;
 let answered = false;
 let levelQuestions = [];
+let currentUser = null;
 
 function shuffle(items) {
   return [...items].sort(() => Math.random() - 0.5);
@@ -112,6 +113,13 @@ function showLevelResult() {
   resultMessage.textContent = passed
     ? "Alle sieben Antworten waren richtig."
     : "Für den Aufstieg müssen alle sieben Antworten richtig sein.";
+  if (currentUser) {
+    currentUser.rounds += 1;
+    if (passed) currentUser.highscore = Math.max(currentUser.highscore, level);
+    currentUser.level = passed ? Math.min(MAX_LEVEL, level + 1) : level;
+    saveCurrentUser();
+    updateDashboard();
+  }
   restartButton.textContent = passed && level === MAX_LEVEL ? "Nochmal spielen ↗" : passed ? "Nächstes Level ↗" : "Level wiederholen ↗";
 }
 
@@ -130,3 +138,141 @@ document.addEventListener("keydown", (event) => {
 });
 
 startLevel();
+
+const authModal = document.querySelector("#auth-modal");
+const passwordModal = document.querySelector("#password-modal");
+const authForm = document.querySelector("#auth-form");
+const passwordForm = document.querySelector("#password-form");
+const authMessage = document.querySelector("#auth-message");
+const passwordMessage = document.querySelector("#password-message");
+const authTitle = document.querySelector("#auth-title");
+const authSubmit = document.querySelector("#auth-submit");
+const nameInput = document.querySelector("#auth-name");
+const nameLabel = document.querySelector("#name-label");
+const userChip = document.querySelector("#user-chip");
+const loginButton = document.querySelector("#login-button");
+const logoutButton = document.querySelector("#logout-button");
+const dashboard = document.querySelector("#dashboard");
+const profileName = document.querySelector("#profile-name");
+const profileProgress = document.querySelector("#profile-progress");
+const profileScore = document.querySelector("#profile-score");
+const profileRounds = document.querySelector("#profile-rounds");
+const leaderboard = document.querySelector("#leaderboard");
+let authMode = "login";
+
+function getUsers() {
+  return JSON.parse(localStorage.getItem("flaggenquiz-users") || "{}");
+}
+
+function saveCurrentUser() {
+  if (!currentUser) return;
+  const users = getUsers();
+  users[currentUser.email] = currentUser;
+  localStorage.setItem("flaggenquiz-users", JSON.stringify(users));
+  localStorage.setItem("flaggenquiz-current", currentUser.email);
+}
+
+async function hashPassword(password) {
+  const data = new TextEncoder().encode(password);
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function openModal(modal) { modal.classList.remove("hidden"); }
+function closeModal(modal) { modal.classList.add("hidden"); }
+
+function setAuthMode(mode) {
+  authMode = mode;
+  const register = mode === "register";
+  document.querySelectorAll(".auth-tab").forEach((tab) => tab.classList.toggle("active", tab.dataset.authView === mode));
+  authTitle.innerHTML = register ? "Konto<br><em>erstellen.</em>" : "Willkommen<br><em>zurück.</em>";
+  authSubmit.textContent = register ? "Registrieren ↗" : "Anmelden ↗";
+  nameInput.classList.toggle("hidden", !register);
+  nameLabel.classList.toggle("hidden", !register);
+  nameInput.required = register;
+  authMessage.textContent = "";
+}
+
+function updateDashboard() {
+  if (!currentUser) return;
+  userChip.textContent = currentUser.name;
+  profileName.textContent = currentUser.name;
+  profileProgress.textContent = `Level ${String(currentUser.level).padStart(2, "0")}`;
+  profileScore.textContent = currentUser.highscore;
+  profileRounds.textContent = currentUser.rounds;
+  dashboard.classList.remove("hidden");
+  renderLeaderboard();
+}
+
+function renderLeaderboard() {
+  const entries = Object.values(getUsers()).sort((first, second) => second.highscore - first.highscore || second.level - first.level).slice(0, 10);
+  leaderboard.innerHTML = entries.length ? entries.map((entry, index) => `
+    <div class="leader-row"><span class="leader-rank">0${index + 1}</span><strong>${entry.name}</strong><span>Level ${String(entry.level).padStart(2, "0")}</span><b>${entry.highscore} Punkte</b></div>
+  `).join("") : `<p class="empty-state">Noch keine Spieler registriert.</p>`;
+}
+
+function restoreSession() {
+  const email = localStorage.getItem("flaggenquiz-current");
+  const user = email ? getUsers()[email] : null;
+  if (!user) return;
+  currentUser = user;
+  level = Math.min(MAX_LEVEL, Math.max(1, user.level));
+  updateDashboard();
+  userChip.classList.remove("hidden");
+  loginButton.classList.add("hidden");
+  logoutButton.classList.remove("hidden");
+}
+
+document.querySelectorAll(".auth-tab").forEach((tab) => tab.addEventListener("click", () => setAuthMode(tab.dataset.authView)));
+loginButton.addEventListener("click", () => { setAuthMode("login"); openModal(authModal); });
+logoutButton.addEventListener("click", () => {
+  currentUser = null;
+  localStorage.removeItem("flaggenquiz-current");
+  userChip.classList.add("hidden");
+  loginButton.classList.remove("hidden");
+  logoutButton.classList.add("hidden");
+  dashboard.classList.add("hidden");
+  level = 1;
+  startLevel();
+});
+document.querySelector("#auth-close").addEventListener("click", () => closeModal(authModal));
+document.querySelector("#password-close").addEventListener("click", () => closeModal(passwordModal));
+document.querySelector("#password-button").addEventListener("click", () => { passwordMessage.textContent = ""; passwordForm.reset(); openModal(passwordModal); });
+document.querySelector("#challenge-button").addEventListener("click", () => { resultEyebrow.textContent = "Lokale Challenge"; resultTitle.innerHTML = "Schlag deine<br><em>Mitspieler.</em>"; resultMessage.textContent = "Spiele eine Runde und setze dich an die Spitze der Rangliste."; quizView.classList.remove("hidden"); dashboard.classList.add("hidden"); window.scrollTo({ top: 0, behavior: "smooth" }); });
+
+authForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const email = document.querySelector("#auth-email").value.trim().toLowerCase();
+  const password = document.querySelector("#auth-password").value;
+  const users = getUsers();
+  if (authMode === "register") {
+    const name = nameInput.value.trim();
+    if (users[email]) { authMessage.textContent = "Diese E-Mail ist bereits registriert."; return; }
+    currentUser = { email, name, passwordHash: await hashPassword(password), level: 1, highscore: 0, rounds: 0 };
+    users[email] = currentUser;
+    localStorage.setItem("flaggenquiz-users", JSON.stringify(users));
+  } else {
+    const user = users[email];
+    if (!user || user.passwordHash !== await hashPassword(password)) { authMessage.textContent = "E-Mail oder Passwort ist nicht korrekt."; return; }
+    currentUser = user;
+  }
+  localStorage.setItem("flaggenquiz-current", email);
+  level = currentUser.level;
+  updateDashboard();
+  userChip.classList.remove("hidden");
+  loginButton.classList.add("hidden");
+  logoutButton.classList.remove("hidden");
+  closeModal(authModal);
+  startLevel();
+});
+
+passwordForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!currentUser) return;
+  currentUser.passwordHash = await hashPassword(document.querySelector("#new-password").value);
+  saveCurrentUser();
+  passwordMessage.textContent = "Passwort erfolgreich geändert.";
+  window.setTimeout(() => closeModal(passwordModal), 700);
+});
+
+restoreSession();

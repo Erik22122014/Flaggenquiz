@@ -21,6 +21,11 @@
         <span class="live-dot" aria-hidden="true"></span>
         <span>35 Level · 7 Fragen pro Level</span>
       </div>
+      <div class="account-actions">
+        <span class="user-chip hidden" id="user-chip"></span>
+        <button class="account-button" id="login-button" type="button">Anmelden</button>
+        <button class="account-button hidden" id="logout-button" type="button">Abmelden</button>
+      </div>
     </header>
 
     <section class="quiz-view" id="quiz-view">
@@ -58,6 +63,25 @@
       </footer>
     </section>
 
+    <section class="dashboard hidden" id="dashboard" aria-live="polite">
+      <div class="dashboard-heading">
+        <div>
+          <p class="eyebrow">Dein Profil</p>
+          <h2><em id="profile-name">Spieler</em></h2>
+        </div>
+        <button class="text-button" id="password-button" type="button">Passwort ändern ↗</button>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card"><span>Fortschritt</span><strong id="profile-progress">Level 01</strong></div>
+        <div class="stat-card"><span>Highscore</span><strong id="profile-score">0</strong></div>
+        <div class="stat-card"><span>Runden</span><strong id="profile-rounds">0</strong></div>
+      </div>
+      <div class="leaderboard-section">
+        <div class="section-heading"><div><p class="eyebrow">Wettbewerb</p><h3>Rangliste</h3></div><button class="challenge-button" id="challenge-button" type="button">Challenge spielen ↗</button></div>
+        <div class="leaderboard" id="leaderboard"></div>
+      </div>
+    </section>
+
     <section class="result-view hidden" id="result-view" aria-live="polite">
       <p class="eyebrow" id="result-eyebrow">Level geschafft</p>
       <h2 id="result-title">Weiter zur<br><em>nächsten Stufe.</em></h2>
@@ -66,6 +90,31 @@
       <button class="primary-button" id="restart-button" type="button">Weiter <span aria-hidden="true">↗</span></button>
     </section>
   </main>
+  <div class="modal hidden" id="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+    <div class="modal-panel">
+      <button class="modal-close" id="auth-close" type="button" aria-label="Dialog schließen">×</button>
+      <p class="eyebrow">Flaggenquiz Konto</p>
+      <h2 id="auth-title">Willkommen<br><em>zurück.</em></h2>
+      <div class="auth-tabs"><button class="auth-tab active" data-auth-view="login" type="button">Anmelden</button><button class="auth-tab" data-auth-view="register" type="button">Registrieren</button></div>
+      <form id="auth-form">
+        <label for="auth-name" id="name-label" class="hidden">Benutzername</label>
+        <input id="auth-name" class="hidden" type="text" autocomplete="username" placeholder="Benutzername" minlength="2">
+        <label for="auth-email">E-Mail</label>
+        <input id="auth-email" type="email" autocomplete="email" placeholder="du@beispiel.de" required>
+        <label for="auth-password">Passwort</label>
+        <input id="auth-password" type="password" autocomplete="current-password" placeholder="Mindestens 6 Zeichen" minlength="6" required>
+        <p class="form-message" id="auth-message" aria-live="polite"></p>
+        <button class="primary-button form-submit" id="auth-submit" type="submit">Anmelden ↗</button>
+      </form>
+    </div>
+  </div>
+  <div class="modal hidden" id="password-modal" role="dialog" aria-modal="true" aria-labelledby="password-title">
+    <div class="modal-panel">
+      <button class="modal-close" id="password-close" type="button" aria-label="Dialog schließen">×</button>
+      <p class="eyebrow">Sicherheit</p><h2 id="password-title">Passwort<br><em>ändern.</em></h2>
+      <form id="password-form"><label for="new-password">Neues Passwort</label><input id="new-password" type="password" minlength="6" placeholder="Mindestens 6 Zeichen" required><p class="form-message" id="password-message" aria-live="polite"></p><button class="primary-button form-submit" type="submit">Passwort speichern ↗</button></form>
+    </div>
+  </div>
   <script src="script.js"></script>
 </body>
 </html>
