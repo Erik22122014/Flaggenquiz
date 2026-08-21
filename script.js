@@ -224,6 +224,8 @@ function showChallengeResult() {
   resultDetail.textContent = `${formatTime(elapsedSeconds)} · ${challengeCorrect}/${CHALLENGE_QUESTIONS} richtig`;
   resultMessage.textContent = "Dein bestes Challenge-Ergebnis wird in der Rangliste angezeigt.";
   nextLevelButton.classList.add("hidden");
+  retryLevelButton.classList.remove("hidden");
+  retryLevelButton.textContent = "Challenge noch einmal spielen ↗";
   restartButton.textContent = "Zum Profil gehen ↗";
 }
 
@@ -261,6 +263,7 @@ function showLevelResult() {
   restartButton.textContent = practiceMode ? "Zurück zum Profil ↗" : "Zum Profil gehen ↗";
   nextLevelButton.classList.toggle("hidden", practiceMode || !passed || level >= MAX_LEVEL);
   retryLevelButton.classList.toggle("hidden", challengeMode);
+  retryLevelButton.textContent = "Level noch einmal spielen ↗";
 }
 
 nextLevelButton.addEventListener("click", () => {
@@ -273,6 +276,10 @@ nextLevelButton.addEventListener("click", () => {
 });
 
 retryLevelButton.addEventListener("click", () => {
+  if (challengeMode) {
+    startChallenge();
+    return;
+  }
   levelFailed = false;
   answered = false;
   resultView.classList.add("hidden");
