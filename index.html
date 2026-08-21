@@ -91,7 +91,10 @@
       <h2 id="result-title">Weiter zur<br><em>nächsten Stufe.</em></h2>
       <div class="result-score"><strong id="final-score">01</strong><span id="result-detail">/ 25 Level</span></div>
       <p id="result-message">Du hast alle sieben Fragen richtig beantwortet.</p>
-      <button class="primary-button" id="restart-button" type="button">Weiter <span aria-hidden="true">↗</span></button>
+      <div class="result-actions">
+        <button class="primary-button hidden" id="next-level-button" type="button">Nächstes Level <span aria-hidden="true">↗</span></button>
+        <button class="secondary-button" id="restart-button" type="button">Zum Profil gehen <span aria-hidden="true">↗</span></button>
+      </div>
     </section>
   </main>
   <div class="modal hidden" id="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-title">

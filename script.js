@@ -38,6 +38,7 @@ const finalScore = document.querySelector("#final-score");
 const resultDetail = document.querySelector("#result-detail");
 const resultMessage = document.querySelector("#result-message");
 const restartButton = document.querySelector("#restart-button");
+const nextLevelButton = document.querySelector("#next-level-button");
 const difficultyElement = document.querySelector(".stage-label");
 
 let level = 1;
@@ -135,10 +136,20 @@ function showLevelResult() {
     if (passed) currentUser.highscore = Math.max(currentUser.highscore, level);
     currentUser.level = passed ? Math.min(MAX_LEVEL, level + 1) : level;
     saveCurrentUser();
-    updateDashboard();
+    updateDashboard(false);
   }
-  restartButton.textContent = practiceMode ? "Zurück zum Profil ↗" : passed && level === MAX_LEVEL ? "Nochmal spielen ↗" : passed ? "Nächstes Level ↗" : "Level wiederholen ↗";
+  restartButton.textContent = practiceMode ? "Zurück zum Profil ↗" : "Zum Profil gehen ↗";
+  nextLevelButton.classList.toggle("hidden", practiceMode || !passed || level >= MAX_LEVEL);
 }
+
+nextLevelButton.addEventListener("click", () => {
+  practiceMode = false;
+  level = Math.min(MAX_LEVEL, level + 1);
+  resultView.classList.add("hidden");
+  quizView.classList.remove("hidden");
+  startLevel();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+});
 
 restartButton.addEventListener("click", () => {
   if (practiceMode) {
@@ -149,11 +160,10 @@ restartButton.addEventListener("click", () => {
     updateDashboard();
     return;
   }
-  const wasPassed = !levelFailed;
-  if (wasPassed && level < MAX_LEVEL) level += 1;
-  quizView.classList.remove("hidden");
   resultView.classList.add("hidden");
-  startLevel();
+  quizView.classList.add("hidden");
+  dashboard.classList.remove("hidden");
+  updateDashboard();
 });
 document.addEventListener("keydown", (event) => {
   if (answered || quizView.classList.contains("hidden")) return;
@@ -219,14 +229,14 @@ function setAuthMode(mode) {
   authMessage.textContent = "";
 }
 
-function updateDashboard() {
+function updateDashboard(show = true) {
   if (!currentUser) return;
   userChip.textContent = currentUser.name;
   profileName.textContent = currentUser.name;
   profileProgress.textContent = `Level ${String(currentUser.level).padStart(2, "0")}`;
   profileScore.textContent = currentUser.highscore;
   profileRounds.textContent = currentUser.rounds;
-  dashboard.classList.remove("hidden");
+  dashboard.classList.toggle("hidden", !show);
   renderPracticeLevels();
   renderLeaderboard();
 }

@@ -78,7 +78,7 @@ h1 em, h2 em { color: var(--green); font-style: normal; }
 .keyboard-hint { color: var(--muted); font-family: "DM Mono", monospace; font-size: 10px; }
 .quiz-rule { color: var(--muted); font-family: "DM Mono", monospace; font-size: 10px; text-transform: uppercase; }
 kbd { display: inline-grid; place-items: center; width: 21px; height: 21px; margin-right: 4px; color: var(--ink); background: #ebe9e0; font-family: inherit; border-bottom: 2px solid #c8c7bc; }
-.skip-button, .primary-button { color: var(--green); background: transparent; border: 0; font-size: 13px; font-weight: 800; }
+.skip-button, .primary-button, .secondary-button { color: var(--green); background: transparent; border: 0; font-size: 13px; font-weight: 800; }
 .skip-button span, .primary-button span { display: inline-block; margin-left: 8px; transition: transform .2s; }
 .skip-button:hover span, .primary-button:hover span { transform: translate(3px, -3px); }
 .hidden { display: none; }
@@ -123,7 +123,10 @@ kbd { display: inline-grid; place-items: center; width: 21px; height: 21px; marg
 .result-score { display: flex; align-items: baseline; gap: 13px; margin: 42px 0 15px; color: var(--muted); font-family: "DM Mono", monospace; }
 .result-score strong { color: var(--orange); font-size: 72px; line-height: 1; font-weight: 500; }
 .result-view > p:not(.eyebrow) { max-width: 420px; color: var(--muted); font-size: 15px; line-height: 1.7; }
-.primary-button { margin-top: 28px; padding: 15px 19px; color: var(--white); background: var(--green); }
+.result-actions { display: flex; align-items: center; gap: 22px; margin-top: 28px; }
+.primary-button { margin-top: 0; padding: 15px 19px; color: var(--white); background: var(--green); }
+.secondary-button { padding: 12px 0; }
+.secondary-button:hover { color: var(--orange); }
 .primary-button:hover { background: var(--ink); }
 @media (max-width: 720px) {
   .app-shell { width: min(100% - 32px, 560px); }
@@ -145,6 +148,7 @@ kbd { display: inline-grid; place-items: center; width: 21px; height: 21px; marg
   .quiz-footer { justify-content: flex-start; }
   .quiz-rule { font-size: 9px; }
   .result-view { padding-top: 100px; }
+  .result-actions { align-items: flex-start; flex-direction: column; gap: 8px; }
   .dashboard { padding-top: 52px; }
   .dashboard-heading { align-items: start; flex-direction: column; }
   .stats-grid { gap: 7px; margin: 32px 0 55px; }
