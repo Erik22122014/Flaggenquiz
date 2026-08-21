@@ -35,7 +35,7 @@
           <h1>Welche Flagge<br><em>ist das?</em></h1>
         </div>
         <div class="score-block">
-          <span class="score-label">Level</span>
+          <span class="score-label" id="score-label">Level</span>
           <strong id="score">01</strong>
         </div>
       </div>
@@ -49,6 +49,7 @@
       <div class="quiz-card">
         <div class="flag-stage">
           <span class="stage-label">Erkennst du mich?</span>
+          <span class="challenge-timer hidden" id="challenge-timer">00:00</span>
           <div class="flag-frame">
             <img id="flag-image" src="https://flagcdn.com/w640/jp.png" alt="Flagge">
           </div>
@@ -81,7 +82,7 @@
         <div class="practice-levels" id="practice-levels"></div>
       </div>
       <div class="leaderboard-section">
-        <div class="section-heading"><div><p class="eyebrow">Wettbewerb</p><h3>Rangliste</h3></div><button class="challenge-button" id="challenge-button" type="button">Challenge spielen ↗</button></div>
+        <div class="section-heading"><div><p class="eyebrow">Wettbewerb</p><h3>Challenge-Rangliste</h3></div><button class="challenge-button" id="challenge-button" type="button">Challenge spielen ↗</button></div>
         <div class="leaderboard" id="leaderboard"></div>
       </div>
     </section>
@@ -93,6 +94,7 @@
       <p id="result-message">Du hast alle sieben Fragen richtig beantwortet.</p>
       <div class="result-actions">
         <button class="primary-button hidden" id="next-level-button" type="button">Nächstes Level <span aria-hidden="true">↗</span></button>
+        <button class="primary-button hidden" id="retry-level-button" type="button">Level noch einmal spielen <span aria-hidden="true">↗</span></button>
         <button class="secondary-button" id="restart-button" type="button">Zum Profil gehen <span aria-hidden="true">↗</span></button>
       </div>
     </section>

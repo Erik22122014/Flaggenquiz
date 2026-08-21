@@ -1,5 +1,7 @@
 const MAX_LEVEL = 35;
 const QUESTIONS_PER_LEVEL = 7;
+const CHALLENGE_QUESTIONS = 20;
+const CHALLENGE_OPTIONS = 10;
 
 // Die Reihenfolge bildet die fünf Schwierigkeitsstufen mit je 49 Flaggen ab.
 const flagCatalog = [
@@ -27,6 +29,7 @@ const orderedFlagCatalog = [
 const flagImage = document.querySelector("#flag-image");
 const answersElement = document.querySelector("#answers");
 const scoreElement = document.querySelector("#score");
+const scoreLabel = document.querySelector("#score-label");
 const questionCount = document.querySelector("#question-count");
 const progressBar = document.querySelector("#progress-bar");
 const levelCount = document.querySelector("#level-count");
@@ -39,7 +42,9 @@ const resultDetail = document.querySelector("#result-detail");
 const resultMessage = document.querySelector("#result-message");
 const restartButton = document.querySelector("#restart-button");
 const nextLevelButton = document.querySelector("#next-level-button");
+const retryLevelButton = document.querySelector("#retry-level-button");
 const difficultyElement = document.querySelector(".stage-label");
+const challengeTimer = document.querySelector("#challenge-timer");
 
 let level = 1;
 let questionIndex = 0;
@@ -48,12 +53,23 @@ let answered = false;
 let levelQuestions = [];
 let currentUser = null;
 let practiceMode = false;
+let challengeMode = false;
+let challengeQuestions = [];
+let challengeCorrect = 0;
+let challengeQuestionIndex = 0;
+let challengeStartedAt = 0;
+let challengeTimerId = null;
 
 function shuffle(items) {
   return [...items].sort(() => Math.random() - 0.5);
 }
 
 function startLevel() {
+  challengeMode = false;
+  clearChallengeTimer();
+  quizView.classList.remove("challenge-active");
+  challengeTimer.classList.add("hidden");
+  scoreLabel.textContent = "Level";
   const firstFlagIndex = (level - 1) * QUESTIONS_PER_LEVEL;
   levelQuestions = orderedFlagCatalog.slice(firstFlagIndex, firstFlagIndex + QUESTIONS_PER_LEVEL).map((question) => ({
     ...question,
@@ -72,6 +88,61 @@ function getOptions(question) {
     .slice(0, 3)
     .map((flag) => flag.country);
   return shuffle([question.country, ...distractors]);
+}
+
+function startChallenge() {
+  challengeMode = true;
+  practiceMode = false;
+  challengeQuestions = shuffle(orderedFlagCatalog).slice(0, CHALLENGE_QUESTIONS).map((question) => ({
+    ...question,
+    options: shuffle([question.country, ...shuffle(orderedFlagCatalog.filter((flag) => flag.code !== question.code)).slice(0, CHALLENGE_OPTIONS - 1).map((flag) => flag.country)])
+  }));
+  challengeCorrect = 0;
+  challengeQuestionIndex = 0;
+  challengeStartedAt = Date.now();
+  clearChallengeTimer();
+  challengeTimerId = window.setInterval(updateChallengeTimer, 250);
+  resultView.classList.add("hidden");
+  dashboard.classList.add("hidden");
+  quizView.classList.remove("hidden", "challenge-active");
+  quizView.classList.add("challenge-active");
+  renderChallengeQuestion();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function updateChallengeTimer() {
+  const elapsedSeconds = Math.floor((Date.now() - challengeStartedAt) / 1000);
+  const minutes = String(Math.floor(elapsedSeconds / 60)).padStart(2, "0");
+  const seconds = String(elapsedSeconds % 60).padStart(2, "0");
+  challengeTimer.textContent = `${minutes}:${seconds}`;
+}
+
+function clearChallengeTimer() {
+  if (challengeTimerId) window.clearInterval(challengeTimerId);
+  challengeTimerId = null;
+}
+
+function renderChallengeQuestion() {
+  const question = challengeQuestions[challengeQuestionIndex];
+  answered = false;
+  flagImage.src = `https://flagcdn.com/w640/${question.code}.png`;
+  flagImage.alt = "Flagge ohne Länderhinweis";
+  questionCount.textContent = `Frage ${String(challengeQuestionIndex + 1).padStart(2, "0")} / ${CHALLENGE_QUESTIONS}`;
+  progressBar.style.width = `${((challengeQuestionIndex + 1) / CHALLENGE_QUESTIONS) * 100}%`;
+  levelCount.textContent = "Challenge · 20 Fragen";
+  scoreLabel.textContent = "Richtig";
+  scoreElement.textContent = String(challengeCorrect).padStart(2, "0");
+  difficultyElement.textContent = "Auf Zeit";
+  challengeTimer.classList.remove("hidden");
+  updateChallengeTimer();
+  answersElement.innerHTML = question.options.map((option, index) => `
+    <button class="answer-button" type="button" data-answer="${option}">
+      <span class="answer-number">${index === 9 ? "0" : index + 1}</span>
+      <span class="answer-text">${option}</span>
+      <span class="answer-arrow" aria-hidden="true">↗</span>
+    </button>
+  `).join("");
+  answersElement.querySelectorAll(".answer-button").forEach((button) => button.addEventListener("click", () => chooseAnswer(button)));
 }
 
 function renderQuestion() {
@@ -105,10 +176,58 @@ function getDifficulty(currentLevel) {
 function chooseAnswer(button) {
   if (answered) return;
   answered = true;
+  if (challengeMode) {
+    const question = challengeQuestions[challengeQuestionIndex];
+    if (button.dataset.answer === question.country) challengeCorrect += 1;
+    answersElement.querySelectorAll(".answer-button").forEach((item) => { item.disabled = true; });
+    window.setTimeout(nextChallengeQuestion, 180);
+    return;
+  }
   const question = levelQuestions[questionIndex];
   if (button.dataset.answer !== question.country) levelFailed = true;
   answersElement.querySelectorAll(".answer-button").forEach((item) => { item.disabled = true; });
   window.setTimeout(nextQuestion, 280);
+}
+
+function nextChallengeQuestion() {
+  if (challengeQuestionIndex === CHALLENGE_QUESTIONS - 1) {
+    showChallengeResult();
+    return;
+  }
+  challengeQuestionIndex += 1;
+  renderChallengeQuestion();
+}
+
+function showChallengeResult() {
+  clearChallengeTimer();
+  const elapsedSeconds = Math.max(1, Math.floor((Date.now() - challengeStartedAt) / 1000));
+  const timePoints = Math.max(0, 120 - elapsedSeconds);
+  const challengePoints = timePoints * challengeCorrect;
+  if (currentUser) {
+    const previousBest = currentUser.challengeBest || 0;
+    if (challengePoints > previousBest) {
+      currentUser.challengeBest = challengePoints;
+      currentUser.challengeCorrect = challengeCorrect;
+      currentUser.challengeTime = elapsedSeconds;
+    }
+    currentUser.challengeAttempts = (currentUser.challengeAttempts || 0) + 1;
+    saveCurrentUser();
+    updateDashboard(false);
+  }
+  quizView.classList.add("hidden");
+  quizView.classList.remove("challenge-active");
+  resultView.classList.remove("hidden");
+  resultEyebrow.textContent = "Challenge beendet";
+  resultTitle.innerHTML = `${challengeCorrect} von ${CHALLENGE_QUESTIONS}<br><em>richtig beantwortet.</em>`;
+  finalScore.textContent = challengePoints;
+  resultDetail.textContent = `${formatTime(elapsedSeconds)} · ${challengeCorrect}/${CHALLENGE_QUESTIONS} richtig`;
+  resultMessage.textContent = "Dein bestes Challenge-Ergebnis wird in der Rangliste angezeigt.";
+  nextLevelButton.classList.add("hidden");
+  restartButton.textContent = "Zum Profil gehen ↗";
+}
+
+function formatTime(totalSeconds) {
+  return `${String(Math.floor(totalSeconds / 60)).padStart(2, "0")} : ${String(totalSeconds % 60).padStart(2, "0")}`;
 }
 
 function nextQuestion() {
@@ -140,11 +259,21 @@ function showLevelResult() {
   }
   restartButton.textContent = practiceMode ? "Zurück zum Profil ↗" : "Zum Profil gehen ↗";
   nextLevelButton.classList.toggle("hidden", practiceMode || !passed || level >= MAX_LEVEL);
+  retryLevelButton.classList.toggle("hidden", challengeMode || passed);
 }
 
 nextLevelButton.addEventListener("click", () => {
   practiceMode = false;
   level = Math.min(MAX_LEVEL, level + 1);
+  resultView.classList.add("hidden");
+  quizView.classList.remove("hidden");
+  startLevel();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+});
+
+retryLevelButton.addEventListener("click", () => {
+  levelFailed = false;
+  answered = false;
   resultView.classList.add("hidden");
   quizView.classList.remove("hidden");
   startLevel();
@@ -167,7 +296,8 @@ restartButton.addEventListener("click", () => {
 });
 document.addEventListener("keydown", (event) => {
   if (answered || quizView.classList.contains("hidden")) return;
-  const index = Number(event.key) - 1;
+  if (!["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"].includes(event.key)) return;
+  const index = event.key === "0" ? 9 : Number(event.key) - 1;
   const button = answersElement.querySelectorAll(".answer-button")[index];
   if (button) chooseAnswer(button);
 });
@@ -262,10 +392,10 @@ function startPractice(practiceLevel) {
 }
 
 function renderLeaderboard() {
-  const entries = Object.values(getUsers()).sort((first, second) => second.highscore - first.highscore || second.level - first.level).slice(0, 10);
+  const entries = Object.values(getUsers()).filter((entry) => entry.challengeAttempts > 0).sort((first, second) => second.challengeBest - first.challengeBest).slice(0, 10);
   leaderboard.innerHTML = entries.length ? entries.map((entry, index) => `
-    <div class="leader-row"><span class="leader-rank">0${index + 1}</span><strong>${entry.name}</strong><span>Level ${String(entry.level).padStart(2, "0")}</span><b>${entry.highscore} Punkte</b></div>
-  `).join("") : `<p class="empty-state">Noch keine Spieler registriert.</p>`;
+    <div class="leader-row"><span class="leader-rank">${String(index + 1).padStart(2, "0")}</span><strong>${entry.name}</strong><span>${entry.challengeCorrect || 0}/${CHALLENGE_QUESTIONS} · ${formatTime(entry.challengeTime || 0)}</span><b>${entry.challengeBest} Punkte</b></div>
+  `).join("") : `<p class="empty-state">Noch niemand hat eine Challenge gespielt.</p>`;
 }
 
 function restoreSession() {
@@ -298,15 +428,7 @@ document.querySelector("#auth-close").addEventListener("click", () => closeModal
 document.querySelector("#password-close").addEventListener("click", () => closeModal(passwordModal));
 document.querySelector("#password-button").addEventListener("click", () => { passwordMessage.textContent = ""; passwordForm.reset(); openModal(passwordModal); });
 document.querySelector("#challenge-button").addEventListener("click", () => {
-  practiceMode = false;
-  level = currentUser ? currentUser.level : level;
-  levelFailed = false;
-  answered = false;
-  resultView.classList.add("hidden");
-  dashboard.classList.add("hidden");
-  quizView.classList.remove("hidden");
-  startLevel();
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  startChallenge();
 });
 
 authForm.addEventListener("submit", async (event) => {
@@ -317,7 +439,7 @@ authForm.addEventListener("submit", async (event) => {
   if (authMode === "register") {
     const name = nameInput.value.trim();
     if (users[email]) { authMessage.textContent = "Diese E-Mail ist bereits registriert."; return; }
-    currentUser = { email, name, passwordHash: await hashPassword(password), level: 1, highscore: 0, rounds: 0 };
+    currentUser = { email, name, passwordHash: await hashPassword(password), level: 1, highscore: 0, rounds: 0, challengeBest: 0, challengeAttempts: 0, challengeCorrect: 0, challengeTime: 0 };
     users[email] = currentUser;
     localStorage.setItem("flaggenquiz-users", JSON.stringify(users));
   } else {
