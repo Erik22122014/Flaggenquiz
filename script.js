@@ -95,7 +95,8 @@ function startChallenge() {
   practiceMode = false;
   challengeQuestions = shuffle(orderedFlagCatalog).slice(0, CHALLENGE_QUESTIONS).map((question) => ({
     ...question,
-    options: shuffle([question.country, ...shuffle(orderedFlagCatalog.filter((flag) => flag.code !== question.code)).slice(0, CHALLENGE_OPTIONS - 1).map((flag) => flag.country)])
+    options: [question.country, ...shuffle(orderedFlagCatalog.filter((flag) => flag.code !== question.code)).slice(0, CHALLENGE_OPTIONS - 1).map((flag) => flag.country)]
+      .sort((first, second) => first.localeCompare(second, "de"))
   }));
   challengeCorrect = 0;
   challengeQuestionIndex = 0;
@@ -259,7 +260,7 @@ function showLevelResult() {
   }
   restartButton.textContent = practiceMode ? "Zurück zum Profil ↗" : "Zum Profil gehen ↗";
   nextLevelButton.classList.toggle("hidden", practiceMode || !passed || level >= MAX_LEVEL);
-  retryLevelButton.classList.toggle("hidden", challengeMode || passed);
+  retryLevelButton.classList.toggle("hidden", challengeMode);
 }
 
 nextLevelButton.addEventListener("click", () => {
