@@ -1,5 +1,6 @@
-const MAX_LEVEL = 35;
-const QUESTIONS_PER_LEVEL = 7;
+const LEVELS_PER_DIFFICULTY = 8;
+const MAX_LEVEL = LEVELS_PER_DIFFICULTY * 4;
+const QUESTIONS_PER_LEVEL = 8;
 const CHALLENGE_QUESTIONS = 20;
 const CHALLENGE_OPTIONS = 10;
 
@@ -20,11 +21,22 @@ const sortedDifficultyGroup = (group) => [...group].sort((first, second) => {
   if (firstRank !== secondRank) return firstRank - secondRank;
   return first.country.length - second.country.length;
 });
-const difficultyCatalog = flagCatalog.slice(49).sort((first, second) => (recognitionRank.get(first.code) ?? Number.MAX_SAFE_INTEGER) - (recognitionRank.get(second.code) ?? Number.MAX_SAFE_INTEGER));
+const challengeCatalog = flagCatalog.slice(49).sort((first, second) => (recognitionRank.get(first.code) ?? Number.MAX_SAFE_INTEGER) - (recognitionRank.get(second.code) ?? Number.MAX_SAFE_INTEGER));
 const orderedFlagCatalog = [
   ...flagCatalog.slice(0, 49),
-  ...Array.from({ length: 4 }, (_, groupIndex) => sortedDifficultyGroup(difficultyCatalog.slice(groupIndex * 49, (groupIndex + 1) * 49))).flat()
+  ...Array.from({ length: 4 }, (_, groupIndex) => sortedDifficultyGroup(challengeCatalog.slice(groupIndex * 49, (groupIndex + 1) * 49))).flat()
 ];
+
+const completeFlagCatalog = [...flagCatalog, ...[
+  ["af", "Afghanistan"], ["cl", "Chile"], ["kp", "Nordkorea"], ["ss", "Südsudan"], ["tt", "Trinidad und Tobago"], ["fm", "Mikronesien"], ["gb-eng", "England"], ["gb-sct", "Schottland"], ["gb-wls", "Wales"], ["gb-nir", "Nordirland"], ["sh-ta", "Tristan da Cunha"]
+].map(([code, country]) => ({ code, country }))];
+const difficultyCatalog = [
+  completeFlagCatalog.slice(0, 49).concat(completeFlagCatalog.slice(49, 64)),
+  completeFlagCatalog.slice(64, 98).concat(completeFlagCatalog.slice(98, 128)),
+  completeFlagCatalog.slice(128, 147).concat(completeFlagCatalog.slice(147, 192)),
+  completeFlagCatalog.slice(192, 256)
+];
+const difficultyFlagGroups = difficultyCatalog.map((group) => group.slice(0, 64));
 
 const flagImage = document.querySelector("#flag-image");
 const answersElement = document.querySelector("#answers");
@@ -70,22 +82,24 @@ function startLevel() {
   quizView.classList.remove("challenge-active");
   challengeTimer.classList.add("hidden");
   scoreLabel.textContent = "Level";
-  const firstFlagIndex = (level - 1) * QUESTIONS_PER_LEVEL;
-  levelQuestions = orderedFlagCatalog.slice(firstFlagIndex, firstFlagIndex + QUESTIONS_PER_LEVEL).map((question) => ({
+  const difficultyIndex = Math.floor((level - 1) / LEVELS_PER_DIFFICULTY);
+  const levelIndex = (level - 1) % LEVELS_PER_DIFFICULTY;
+  const difficultyFlags = difficultyFlagGroups[difficultyIndex];
+  const levelFlags = shuffle(difficultyFlags).slice(levelIndex * QUESTIONS_PER_LEVEL, (levelIndex + 1) * QUESTIONS_PER_LEVEL);
+  if (difficultyIndex >= 2) levelFlags[1 + Math.floor(Math.random() * (levelFlags.length - 1))] = levelFlags[0];
+  levelQuestions = levelFlags.map((question, index) => ({
     ...question,
-    options: getOptions(question)
+    options: getOptions(question, levelFlags, index)
   }));
   questionIndex = 0;
   levelFailed = false;
   renderQuestion();
 }
 
-function getOptions(question) {
-  const difficultyStart = Math.floor((level - 1) / 7) * 49;
-  const difficultyEnd = difficultyStart + 49;
-  const sameDifficultyFlags = orderedFlagCatalog.slice(difficultyStart, difficultyEnd);
-  const distractors = shuffle(sameDifficultyFlags.filter((flag) => flag.code !== question.code))
-    .slice(0, 3)
+function getOptions(question, levelFlags, questionIndex) {
+  const levelOptions = levelFlags.filter((flag, index) => index !== questionIndex && flag.code !== question.code);
+  const distractors = shuffle(levelOptions)
+    .slice(0, Math.min(3, levelOptions.length))
     .map((flag) => flag.country);
   return shuffle([question.country, ...distractors]);
 }
@@ -167,11 +181,7 @@ function renderQuestion() {
 }
 
 function getDifficulty(currentLevel) {
-  if (currentLevel <= 7) return "Sehr einfach";
-  if (currentLevel <= 14) return "Einfach";
-  if (currentLevel <= 21) return "Mittel";
-  if (currentLevel <= 28) return "Schwer";
-  return "Sehr schwer";
+  return ["Einfach", "Mittel", "Schwer", "Sehr schwer"][Math.floor((currentLevel - 1) / LEVELS_PER_DIFFICULTY)];
 }
 
 function chooseAnswer(button) {
@@ -249,10 +259,10 @@ function showLevelResult() {
   resultEyebrow.textContent = passed ? `Level ${level} geschafft` : `Level ${level} wiederholen`;
   resultTitle.innerHTML = passed ? "Weiter zur<br><em>nächsten Stufe.</em>" : "Fast geschafft.<br><em>Versuch es erneut.</em>";
   finalScore.textContent = String(level).padStart(2, "0");
-  resultDetail.textContent = passed ? `/ ${MAX_LEVEL} Level` : "· 7 neue Flaggen";
+  resultDetail.textContent = passed ? `/ ${MAX_LEVEL} Level` : "· 8 neue Flaggen";
   resultMessage.textContent = passed
-    ? "Alle sieben Antworten waren richtig."
-    : "Für den Aufstieg müssen alle sieben Antworten richtig sein.";
+    ? "Alle acht Antworten waren richtig."
+    : "Für den Aufstieg müssen alle acht Antworten richtig sein.";
   if (currentUser && !practiceMode) {
     currentUser.rounds += 1;
     if (passed) currentUser.highscore = Math.max(currentUser.highscore, level);
