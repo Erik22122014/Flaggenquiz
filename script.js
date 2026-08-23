@@ -5,6 +5,7 @@ const CHALLENGE_QUESTIONS = 20;
 const CHALLENGE_OPTIONS = 10;
 const SUPABASE_URL = "https://jruldtnbbdvqgmtvtddw.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_ZxR9EXc-XFqmv-p1s1h-cQ_dA2eqltp";
+const AUTH_REDIRECT_URL = "https://erik22122014.github.io/Flaggenquiz/";
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
 // Die Reihenfolge bildet die fünf Schwierigkeitsstufen mit je 49 Flaggen ab.
@@ -461,7 +462,14 @@ authForm.addEventListener("submit", async (event) => {
   const password = document.querySelector("#auth-password").value;
   if (authMode === "register") {
     const name = nameInput.value.trim();
-    const { data, error } = await supabaseClient.auth.signUp({ email, password, options: { data: { username: name } } });
+    const { data, error } = await supabaseClient.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { username: name },
+        emailRedirectTo: AUTH_REDIRECT_URL
+      }
+    });
     if (error) { authMessage.textContent = error.message; return; }
     if (!data.session) { authMessage.textContent = "Bitte bestätige zuerst deine E-Mail-Adresse."; return; }
     authUser = data.user;
