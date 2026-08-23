@@ -3,6 +3,9 @@ const MAX_LEVEL = LEVELS_PER_DIFFICULTY * 4;
 const QUESTIONS_PER_LEVEL = 8;
 const CHALLENGE_QUESTIONS = 20;
 const CHALLENGE_OPTIONS = 10;
+const SUPABASE_URL = "https://jruldtnbbdvqgmtvtddw.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_ZxR9EXc-XFqmv-p1s1h-cQ_dA2eqltp";
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
 // Die Reihenfolge bildet die fünf Schwierigkeitsstufen mit je 49 Flaggen ab.
 const flagCatalog = [
@@ -30,13 +33,9 @@ const orderedFlagCatalog = [
 const completeFlagCatalog = [...flagCatalog, ...[
   ["af", "Afghanistan"], ["cl", "Chile"], ["kp", "Nordkorea"], ["ss", "Südsudan"], ["tt", "Trinidad und Tobago"], ["fm", "Mikronesien"], ["gb-eng", "England"], ["gb-sct", "Schottland"], ["gb-wls", "Wales"], ["gb-nir", "Nordirland"], ["sh-ta", "Tristan da Cunha"]
 ].map(([code, country]) => ({ code, country }))];
-const difficultyCatalog = [
-  completeFlagCatalog.slice(0, 49).concat(completeFlagCatalog.slice(49, 64)),
-  completeFlagCatalog.slice(64, 98).concat(completeFlagCatalog.slice(98, 128)),
-  completeFlagCatalog.slice(128, 147).concat(completeFlagCatalog.slice(147, 192)),
-  completeFlagCatalog.slice(192, 256)
-];
-const difficultyFlagGroups = difficultyCatalog.map((group) => group.slice(0, 64));
+const difficultyFlagGroups = Array.from({ length: 4 }, (_, difficultyIndex) => (
+  completeFlagCatalog.slice(difficultyIndex * 64, (difficultyIndex + 1) * 64)
+));
 
 const flagImage = document.querySelector("#flag-image");
 const answersElement = document.querySelector("#answers");
@@ -64,6 +63,7 @@ let levelFailed = false;
 let answered = false;
 let levelQuestions = [];
 let currentUser = null;
+let authUser = null;
 let practiceMode = false;
 let challengeMode = false;
 let challengeQuestions = [];
@@ -83,9 +83,8 @@ function startLevel() {
   challengeTimer.classList.add("hidden");
   scoreLabel.textContent = "Level";
   const difficultyIndex = Math.floor((level - 1) / LEVELS_PER_DIFFICULTY);
-  const levelIndex = (level - 1) % LEVELS_PER_DIFFICULTY;
   const difficultyFlags = difficultyFlagGroups[difficultyIndex];
-  const levelFlags = shuffle(difficultyFlags).slice(levelIndex * QUESTIONS_PER_LEVEL, (levelIndex + 1) * QUESTIONS_PER_LEVEL);
+  const levelFlags = shuffle(difficultyFlags).slice(0, QUESTIONS_PER_LEVEL);
   if (difficultyIndex >= 2) levelFlags[1 + Math.floor(Math.random() * (levelFlags.length - 1))] = levelFlags[0];
   levelQuestions = levelFlags.map((question, index) => ({
     ...question,
@@ -107,9 +106,9 @@ function getOptions(question, levelFlags, questionIndex) {
 function startChallenge() {
   challengeMode = true;
   practiceMode = false;
-  challengeQuestions = shuffle(orderedFlagCatalog).slice(0, CHALLENGE_QUESTIONS).map((question) => ({
+  challengeQuestions = shuffle(completeFlagCatalog).slice(0, CHALLENGE_QUESTIONS).map((question) => ({
     ...question,
-    options: [question.country, ...shuffle(orderedFlagCatalog.filter((flag) => flag.code !== question.code)).slice(0, CHALLENGE_OPTIONS - 1).map((flag) => flag.country)]
+    options: [question.country, ...shuffle(completeFlagCatalog.filter((flag) => flag.code !== question.code)).slice(0, CHALLENGE_OPTIONS - 1).map((flag) => flag.country)]
       .sort((first, second) => first.localeCompare(second, "de"))
   }));
   challengeCorrect = 0;
@@ -209,21 +208,14 @@ function nextChallengeQuestion() {
   renderChallengeQuestion();
 }
 
-function showChallengeResult() {
+async function showChallengeResult() {
   clearChallengeTimer();
   const elapsedSeconds = Math.max(1, Math.floor((Date.now() - challengeStartedAt) / 1000));
   const timePoints = Math.max(0, 120 - elapsedSeconds);
   const challengePoints = timePoints * challengeCorrect;
-  if (currentUser) {
-    const previousBest = currentUser.challengeBest || 0;
-    if (challengePoints > previousBest) {
-      currentUser.challengeBest = challengePoints;
-      currentUser.challengeCorrect = challengeCorrect;
-      currentUser.challengeTime = elapsedSeconds;
-    }
-    currentUser.challengeAttempts = (currentUser.challengeAttempts || 0) + 1;
-    saveCurrentUser();
-    updateDashboard(false);
+  if (authUser) {
+    await saveChallengeResult(challengePoints, challengeCorrect, elapsedSeconds);
+    await updateDashboard(false);
   }
   quizView.classList.add("hidden");
   quizView.classList.remove("challenge-active");
@@ -252,7 +244,7 @@ function nextQuestion() {
   renderQuestion();
 }
 
-function showLevelResult() {
+async function showLevelResult() {
   quizView.classList.add("hidden");
   resultView.classList.remove("hidden");
   const passed = !levelFailed;
@@ -263,12 +255,12 @@ function showLevelResult() {
   resultMessage.textContent = passed
     ? "Alle acht Antworten waren richtig."
     : "Für den Aufstieg müssen alle acht Antworten richtig sein.";
-  if (currentUser && !practiceMode) {
+  if (authUser && !practiceMode) {
     currentUser.rounds += 1;
     if (passed) currentUser.highscore = Math.max(currentUser.highscore, level);
     currentUser.level = passed ? Math.min(MAX_LEVEL, level + 1) : level;
-    saveCurrentUser();
-    updateDashboard(false);
+    await saveCurrentUser(passed);
+    await updateDashboard(false);
   }
   restartButton.textContent = practiceMode ? "Zurück zum Profil ↗" : "Zum Profil gehen ↗";
   nextLevelButton.classList.toggle("hidden", practiceMode || !passed || level >= MAX_LEVEL);
@@ -344,22 +336,29 @@ const practiceLevels = document.querySelector("#practice-levels");
 const leaderboard = document.querySelector("#leaderboard");
 let authMode = "login";
 
-function getUsers() {
-  return JSON.parse(localStorage.getItem("flaggenquiz-users") || "{}");
+async function saveCurrentUser(passed) {
+  if (!authUser || !currentUser) return;
+  const nextLevel = passed ? Math.min(MAX_LEVEL, level + 1) : level;
+  currentUser.level = nextLevel;
+  await supabaseClient.from("profiles").update({
+    current_level: currentUser.level,
+    highscore: currentUser.highscore,
+    rounds: currentUser.rounds,
+    updated_at: new Date().toISOString()
+  }).eq("id", authUser.id);
+  if (passed) await supabaseClient.from("level_progress").upsert({ user_id: authUser.id, level, completed_at: new Date().toISOString() });
 }
 
-function saveCurrentUser() {
-  if (!currentUser) return;
-  const users = getUsers();
-  users[currentUser.email] = currentUser;
-  localStorage.setItem("flaggenquiz-users", JSON.stringify(users));
-  localStorage.setItem("flaggenquiz-current", currentUser.email);
-}
-
-async function hashPassword(password) {
-  const data = new TextEncoder().encode(password);
-  const digest = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
+async function saveChallengeResult(points, correctAnswers, elapsedSeconds) {
+  if (!authUser || !currentUser) return;
+  const { error } = await supabaseClient.from("challenge_scores").insert({
+    user_id: authUser.id,
+    username: currentUser.name,
+    correct_answers: correctAnswers,
+    elapsed_seconds: elapsedSeconds,
+    points
+  });
+  if (error) console.error("Challenge konnte nicht gespeichert werden", error);
 }
 
 function openModal(modal) { modal.classList.remove("hidden"); }
@@ -377,7 +376,7 @@ function setAuthMode(mode) {
   authMessage.textContent = "";
 }
 
-function updateDashboard(show = true) {
+async function updateDashboard(show = true) {
   if (!currentUser) return;
   userChip.textContent = currentUser.name;
   profileName.textContent = currentUser.name;
@@ -386,7 +385,7 @@ function updateDashboard(show = true) {
   profileRounds.textContent = currentUser.rounds;
   dashboard.classList.toggle("hidden", !show);
   renderPracticeLevels();
-  renderLeaderboard();
+  await renderLeaderboard();
 }
 
 function renderPracticeLevels() {
@@ -409,19 +408,25 @@ function startPractice(practiceLevel) {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-function renderLeaderboard() {
-  const entries = Object.values(getUsers()).filter((entry) => entry.challengeAttempts > 0).sort((first, second) => second.challengeBest - first.challengeBest).slice(0, 10);
+async function renderLeaderboard() {
+  const { data: scores = [], error } = await supabaseClient.from("challenge_scores").select("username, correct_answers, elapsed_seconds, points").order("points", { ascending: false }).limit(100);
+  if (error) { leaderboard.innerHTML = `<p class="empty-state">Rangliste konnte nicht geladen werden.</p>`; return; }
+  const bestScores = new Map();
+  scores.forEach((entry) => { if (!bestScores.has(entry.username)) bestScores.set(entry.username, entry); });
+  const entries = [...bestScores.values()].slice(0, 10);
   leaderboard.innerHTML = entries.length ? entries.map((entry, index) => `
-    <div class="leader-row"><span class="leader-rank">${String(index + 1).padStart(2, "0")}</span><strong>${entry.name}</strong><span>${entry.challengeCorrect || 0}/${CHALLENGE_QUESTIONS} · ${formatTime(entry.challengeTime || 0)}</span><b>${entry.challengeBest} Punkte</b></div>
+    <div class="leader-row"><span class="leader-rank">${String(index + 1).padStart(2, "0")}</span><strong>${entry.username}</strong><span>${entry.correct_answers}/${CHALLENGE_QUESTIONS} · ${formatTime(entry.elapsed_seconds)}</span><b>${entry.points} Punkte</b></div>
   `).join("") : `<p class="empty-state">Noch niemand hat eine Challenge gespielt.</p>`;
 }
 
-function restoreSession() {
-  const email = localStorage.getItem("flaggenquiz-current");
-  const user = email ? getUsers()[email] : null;
-  if (!user) return;
-  currentUser = user;
-  level = Math.min(MAX_LEVEL, Math.max(1, user.level));
+async function restoreSession() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session) return;
+  authUser = session.user;
+  const { data: profile } = await supabaseClient.from("profiles").select("*").eq("id", authUser.id).single();
+  if (!profile) return;
+  currentUser = { name: profile.username, level: profile.current_level, highscore: profile.highscore, rounds: profile.rounds };
+  level = Math.min(MAX_LEVEL, Math.max(1, currentUser.level));
   startLevel();
   updateDashboard();
   userChip.classList.remove("hidden");
@@ -431,10 +436,11 @@ function restoreSession() {
 
 document.querySelectorAll(".auth-tab").forEach((tab) => tab.addEventListener("click", () => setAuthMode(tab.dataset.authView)));
 loginButton.addEventListener("click", () => { setAuthMode("login"); openModal(authModal); });
-logoutButton.addEventListener("click", () => {
+logoutButton.addEventListener("click", async () => {
+  await supabaseClient.auth.signOut();
   currentUser = null;
+  authUser = null;
   practiceMode = false;
-  localStorage.removeItem("flaggenquiz-current");
   userChip.classList.add("hidden");
   loginButton.classList.remove("hidden");
   logoutButton.classList.add("hidden");
@@ -453,19 +459,20 @@ authForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const email = document.querySelector("#auth-email").value.trim().toLowerCase();
   const password = document.querySelector("#auth-password").value;
-  const users = getUsers();
   if (authMode === "register") {
     const name = nameInput.value.trim();
-    if (users[email]) { authMessage.textContent = "Diese E-Mail ist bereits registriert."; return; }
-    currentUser = { email, name, passwordHash: await hashPassword(password), level: 1, highscore: 0, rounds: 0, challengeBest: 0, challengeAttempts: 0, challengeCorrect: 0, challengeTime: 0 };
-    users[email] = currentUser;
-    localStorage.setItem("flaggenquiz-users", JSON.stringify(users));
+    const { data, error } = await supabaseClient.auth.signUp({ email, password, options: { data: { username: name } } });
+    if (error) { authMessage.textContent = error.message; return; }
+    if (!data.session) { authMessage.textContent = "Bitte bestätige zuerst deine E-Mail-Adresse."; return; }
+    authUser = data.user;
+    currentUser = { name, level: 1, highscore: 0, rounds: 0 };
   } else {
-    const user = users[email];
-    if (!user || user.passwordHash !== await hashPassword(password)) { authMessage.textContent = "E-Mail oder Passwort ist nicht korrekt."; return; }
-    currentUser = user;
+    const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+    if (error) { authMessage.textContent = "E-Mail oder Passwort ist nicht korrekt."; return; }
+    authUser = data.user;
+    const { data: profile } = await supabaseClient.from("profiles").select("*").eq("id", authUser.id).single();
+    currentUser = { name: profile.username, level: profile.current_level, highscore: profile.highscore, rounds: profile.rounds };
   }
-  localStorage.setItem("flaggenquiz-current", email);
   level = currentUser.level;
   updateDashboard();
   userChip.classList.remove("hidden");
@@ -478,10 +485,11 @@ authForm.addEventListener("submit", async (event) => {
 passwordForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!currentUser) return;
-  currentUser.passwordHash = await hashPassword(document.querySelector("#new-password").value);
-  saveCurrentUser();
+  const { error } = await supabaseClient.auth.updateUser({ password: document.querySelector("#new-password").value });
+  if (error) { passwordMessage.textContent = error.message; return; }
   passwordMessage.textContent = "Passwort erfolgreich geändert.";
   window.setTimeout(() => closeModal(passwordModal), 700);
 });
 
+supabaseClient.auth.onAuthStateChange(() => restoreSession());
 restoreSession();
