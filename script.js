@@ -377,6 +377,7 @@ const profileRounds = document.querySelector("#profile-rounds");
 const practiceLevels = document.querySelector("#practice-levels");
 const leaderboard = document.querySelector("#leaderboard");
 const continueButton = document.querySelector("#continue-button");
+const backToProfileButton = document.querySelector("#back-to-profile-button");
 let authMode = "login";
 
 async function saveCurrentUser(passed) {
@@ -479,6 +480,7 @@ async function restoreSession() {
   userChip.classList.remove("hidden");
   loginButton.classList.add("hidden");
   logoutButton.classList.remove("hidden");
+  backToProfileButton.classList.remove("hidden");
 }
 
 document.querySelectorAll(".auth-tab").forEach((tab) => tab.addEventListener("click", () => setAuthMode(tab.dataset.authView)));
@@ -491,6 +493,7 @@ logoutButton.addEventListener("click", async () => {
   userChip.classList.add("hidden");
   loginButton.classList.remove("hidden");
   logoutButton.classList.add("hidden");
+  backToProfileButton.classList.add("hidden");
   dashboard.classList.add("hidden");
   level = 1;
   startLevel();
@@ -498,6 +501,17 @@ logoutButton.addEventListener("click", async () => {
 document.querySelector("#auth-close").addEventListener("click", () => closeModal(authModal));
 document.querySelector("#password-close").addEventListener("click", () => closeModal(passwordModal));
 document.querySelector("#password-button").addEventListener("click", () => { passwordMessage.textContent = ""; passwordForm.reset(); openModal(passwordModal); });
+backToProfileButton.addEventListener("click", () => {
+  if (!currentUser) return;
+  clearChallengeTimer();
+  challengeMode = false;
+  practiceMode = false;
+  quizView.classList.add("hidden");
+  resultView.classList.add("hidden");
+  dashboard.classList.remove("hidden");
+  updateDashboard();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+});
 passwordResetButton.addEventListener("click", async () => {
   const email = document.querySelector("#auth-email").value.trim().toLowerCase();
   if (!email) {
@@ -553,6 +567,7 @@ authForm.addEventListener("submit", async (event) => {
   userChip.classList.remove("hidden");
   loginButton.classList.add("hidden");
   logoutButton.classList.remove("hidden");
+  backToProfileButton.classList.remove("hidden");
   closeModal(authModal);
   startLevel();
 });
