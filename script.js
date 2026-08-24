@@ -34,7 +34,8 @@ const orderedFlagCatalog = [
 const completeFlagCatalog = [...flagCatalog, ...[
   ["af", "Afghanistan"], ["cl", "Chile"], ["kp", "Nordkorea"], ["ss", "Südsudan"], ["tt", "Trinidad und Tobago"], ["fm", "Mikronesien"], ["gb-eng", "England"], ["gb-sct", "Schottland"], ["gb-wls", "Wales"], ["gb-nir", "Nordirland"], ["sh-ta", "Tristan da Cunha"]
 ].map(([code, country]) => ({ code, country }))];
-// Die Reihenfolge innerhalb jeder Gruppe ist alphabetisch nach Ländernamen.
+// Die Listen definieren die Schwierigkeiten. Ihre Reihenfolge wird beim Start
+// gemischt, damit die Länder nicht anhand des Alphabets erraten werden können.
 // Diego Garcia und Tristan da Cunha werden bewusst nicht verwendet.
 const difficultyFlagCodes = [
   "eg dz ar au bs be br bg cl cn cr dk de do ec gb-eng fi fr gh gr in id ie is il it jm jp ca co hr cu lu my mt ma mx nl nz ng no at pk pe ph pl pt ro ru gb-sct se ch rs sk es za kr th tr ua hu us gb vn".split(" "),
@@ -46,7 +47,7 @@ const flagsByCode = new Map([
   ...completeFlagCatalog,
   { code: "sc", country: "Seychellen" }
 ].map((flag) => [flag.code, flag]));
-const difficultyFlagGroups = difficultyFlagCodes.map((codes) => codes.map((code) => flagsByCode.get(code)));
+const difficultyFlagGroups = difficultyFlagCodes.map((codes) => shuffle(codes.map((code) => flagsByCode.get(code))));
 const playableFlagCatalog = difficultyFlagGroups.flat();
 
 const flagImage = document.querySelector("#flag-image");
