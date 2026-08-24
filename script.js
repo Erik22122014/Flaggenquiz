@@ -85,21 +85,34 @@ function startLevel() {
   scoreLabel.textContent = "Level";
   const difficultyIndex = Math.floor((level - 1) / LEVELS_PER_DIFFICULTY);
   const difficultyFlags = difficultyFlagGroups[difficultyIndex];
-  const levelFlags = shuffle(difficultyFlags).slice(0, QUESTIONS_PER_LEVEL);
-  if (difficultyIndex >= 2) levelFlags[1 + Math.floor(Math.random() * (levelFlags.length - 1))] = levelFlags[0];
-  levelQuestions = levelFlags.map((question, index) => ({
-    ...question,
-    options: getOptions(question, levelFlags, index)
-  }));
+  const levelIndexWithinDifficulty = (level - 1) % LEVELS_PER_DIFFICULTY;
+  const levelFlags = shuffle(
+    difficultyFlags.slice(
+      levelIndexWithinDifficulty * QUESTIONS_PER_LEVEL,
+      (levelIndexWithinDifficulty + 1) * QUESTIONS_PER_LEVEL
+    )
+  );
+  let previousOptions = [];
+  levelQuestions = levelFlags.map((question, index) => {
+    const options = getOptions(question, difficultyFlags, previousOptions, levelFlags[index + 1]);
+    previousOptions = options;
+    return { ...question, options };
+  });
   questionIndex = 0;
   levelFailed = false;
   renderQuestion();
 }
 
-function getOptions(question, levelFlags, questionIndex) {
-  const levelOptions = levelFlags.filter((flag, index) => index !== questionIndex && flag.code !== question.code);
-  const distractors = shuffle(levelOptions)
-    .slice(0, Math.min(3, levelOptions.length))
+function getOptions(question, optionPool, previousOptions = [], nextQuestion = null, optionCount = 4) {
+  // Die richtige Antwort der nächsten Frage wird ebenfalls ausgespart,
+  // damit keine Antwortoption in zwei aufeinanderfolgenden Fragen erscheint.
+  const unavailableCountries = new Set([
+    question.country,
+    ...previousOptions,
+    ...(nextQuestion ? [nextQuestion.country] : [])
+  ]);
+  const distractors = shuffle(optionPool.filter((flag) => !unavailableCountries.has(flag.country)))
+    .slice(0, optionCount - 1)
     .map((flag) => flag.country);
   return shuffle([question.country, ...distractors]);
 }
@@ -107,11 +120,19 @@ function getOptions(question, levelFlags, questionIndex) {
 function startChallenge() {
   challengeMode = true;
   practiceMode = false;
-  challengeQuestions = shuffle(completeFlagCatalog).slice(0, CHALLENGE_QUESTIONS).map((question) => ({
-    ...question,
-    options: [question.country, ...shuffle(completeFlagCatalog.filter((flag) => flag.code !== question.code)).slice(0, CHALLENGE_OPTIONS - 1).map((flag) => flag.country)]
-      .sort((first, second) => first.localeCompare(second, "de"))
-  }));
+  const selectedQuestions = shuffle(completeFlagCatalog).slice(0, CHALLENGE_QUESTIONS);
+  let previousOptions = [];
+  challengeQuestions = selectedQuestions.map((question, index) => {
+    const options = getOptions(
+      question,
+      completeFlagCatalog,
+      previousOptions,
+      selectedQuestions[index + 1],
+      CHALLENGE_OPTIONS
+    ).sort((first, second) => first.localeCompare(second, "de"));
+    previousOptions = options;
+    return { ...question, options };
+  });
   challengeCorrect = 0;
   challengeQuestionIndex = 0;
   challengeStartedAt = Date.now();
@@ -335,6 +356,7 @@ const profileScore = document.querySelector("#profile-score");
 const profileRounds = document.querySelector("#profile-rounds");
 const practiceLevels = document.querySelector("#practice-levels");
 const leaderboard = document.querySelector("#leaderboard");
+const continueButton = document.querySelector("#continue-button");
 let authMode = "login";
 
 async function saveCurrentUser(passed) {
@@ -384,6 +406,9 @@ async function updateDashboard(show = true) {
   profileProgress.textContent = `Level ${String(currentUser.level).padStart(2, "0")}`;
   profileScore.textContent = currentUser.highscore;
   profileRounds.textContent = currentUser.rounds;
+  const allLevelsCompleted = currentUser.highscore >= MAX_LEVEL;
+  continueButton.disabled = allLevelsCompleted;
+  continueButton.textContent = allLevelsCompleted ? "Alle Level geschafft" : "Nächstes Level spielen ↗";
   dashboard.classList.toggle("hidden", !show);
   renderPracticeLevels();
   await renderLeaderboard();
@@ -452,6 +477,16 @@ logoutButton.addEventListener("click", async () => {
 document.querySelector("#auth-close").addEventListener("click", () => closeModal(authModal));
 document.querySelector("#password-close").addEventListener("click", () => closeModal(passwordModal));
 document.querySelector("#password-button").addEventListener("click", () => { passwordMessage.textContent = ""; passwordForm.reset(); openModal(passwordModal); });
+continueButton.addEventListener("click", () => {
+  if (!currentUser || currentUser.highscore >= MAX_LEVEL) return;
+  practiceMode = false;
+  level = Math.min(MAX_LEVEL, Math.max(1, currentUser.level));
+  resultView.classList.add("hidden");
+  dashboard.classList.add("hidden");
+  quizView.classList.remove("hidden");
+  startLevel();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+});
 document.querySelector("#challenge-button").addEventListener("click", () => {
   startChallenge();
 });
