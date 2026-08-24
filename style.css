@@ -125,6 +125,7 @@ kbd { display: inline-grid; place-items: center; width: 21px; height: 21px; marg
 .modal-panel input:focus { border-color: var(--green); }
 .form-message { min-height: 18px; margin: 8px 0 0; color: var(--orange); font-size: 12px; }
 .form-submit { margin-top: 10px; justify-self: start; }
+.password-reset-button { justify-self: start; margin-top: 4px; }
 .result-view { max-width: 700px; padding: 140px 0 80px; }
 .result-score { display: flex; align-items: baseline; gap: 13px; margin: 42px 0 15px; color: var(--muted); font-family: "DM Mono", monospace; }
 .result-score strong { color: var(--orange); font-size: 72px; line-height: 1; font-weight: 500; }

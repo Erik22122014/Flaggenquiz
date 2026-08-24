@@ -285,14 +285,17 @@ async function showLevelResult() {
     await updateDashboard(false);
   }
   restartButton.textContent = practiceMode ? "Zurück zum Profil ↗" : "Zum Profil gehen ↗";
-  nextLevelButton.classList.toggle("hidden", practiceMode || !passed || level >= MAX_LEVEL);
+  nextLevelButton.classList.toggle("hidden", !passed || level >= MAX_LEVEL);
   retryLevelButton.classList.toggle("hidden", challengeMode);
   retryLevelButton.textContent = "Level noch einmal spielen ↗";
 }
 
 nextLevelButton.addEventListener("click", () => {
-  practiceMode = false;
-  level = Math.min(MAX_LEVEL, level + 1);
+  const followingLevel = Math.min(MAX_LEVEL, level + 1);
+  // Im Training bleiben bereits bestandene Folgelevel im Trainingsmodus.
+  // Das erste noch offene Level wird wieder als normaler Fortschritt gespielt.
+  practiceMode = Boolean(practiceMode && currentUser && followingLevel <= currentUser.highscore);
+  level = followingLevel;
   resultView.classList.add("hidden");
   quizView.classList.remove("hidden");
   startLevel();
@@ -344,6 +347,7 @@ const authMessage = document.querySelector("#auth-message");
 const passwordMessage = document.querySelector("#password-message");
 const authTitle = document.querySelector("#auth-title");
 const authSubmit = document.querySelector("#auth-submit");
+const passwordResetButton = document.querySelector("#password-reset-button");
 const nameInput = document.querySelector("#auth-name");
 const nameLabel = document.querySelector("#name-label");
 const userChip = document.querySelector("#user-chip");
@@ -395,6 +399,7 @@ function setAuthMode(mode) {
   authSubmit.textContent = register ? "Registrieren ↗" : "Anmelden ↗";
   nameInput.classList.toggle("hidden", !register);
   nameLabel.classList.toggle("hidden", !register);
+  passwordResetButton.classList.toggle("hidden", register);
   nameInput.required = register;
   authMessage.textContent = "";
 }
@@ -415,7 +420,7 @@ async function updateDashboard(show = true) {
 }
 
 function renderPracticeLevels() {
-  const completedLevels = Math.min(MAX_LEVEL, Math.max(0, currentUser.level - 1));
+  const completedLevels = Math.min(MAX_LEVEL, Math.max(0, currentUser.highscore));
   practiceLevels.innerHTML = completedLevels
     ? Array.from({ length: completedLevels }, (_, index) => `<button class="practice-level" type="button" data-level="${index + 1}">Level ${String(index + 1).padStart(2, "0")} <span>↗</span></button>`).join("")
     : `<p class="empty-state">Schließe dein erstes Level ab, um es hier üben zu können.</p>`;
@@ -477,6 +482,17 @@ logoutButton.addEventListener("click", async () => {
 document.querySelector("#auth-close").addEventListener("click", () => closeModal(authModal));
 document.querySelector("#password-close").addEventListener("click", () => closeModal(passwordModal));
 document.querySelector("#password-button").addEventListener("click", () => { passwordMessage.textContent = ""; passwordForm.reset(); openModal(passwordModal); });
+passwordResetButton.addEventListener("click", async () => {
+  const email = document.querySelector("#auth-email").value.trim().toLowerCase();
+  if (!email) {
+    authMessage.textContent = "Gib zuerst deine E-Mail-Adresse ein.";
+    return;
+  }
+  const { error } = await supabaseClient.auth.resetPasswordForEmail(email, { redirectTo: AUTH_REDIRECT_URL });
+  authMessage.textContent = error
+    ? error.message
+    : "Wenn ein Konto mit dieser E-Mail-Adresse existiert, wurde ein Link zum Zurücksetzen verschickt.";
+});
 continueButton.addEventListener("click", () => {
   if (!currentUser || currentUser.highscore >= MAX_LEVEL) return;
   practiceMode = false;
@@ -527,12 +543,21 @@ authForm.addEventListener("submit", async (event) => {
 
 passwordForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  if (!currentUser) return;
+  if (!authUser) return;
   const { error } = await supabaseClient.auth.updateUser({ password: document.querySelector("#new-password").value });
   if (error) { passwordMessage.textContent = error.message; return; }
   passwordMessage.textContent = "Passwort erfolgreich geändert.";
   window.setTimeout(() => closeModal(passwordModal), 700);
 });
 
-supabaseClient.auth.onAuthStateChange(() => restoreSession());
+supabaseClient.auth.onAuthStateChange((event, session) => {
+  if (session) authUser = session.user;
+  restoreSession();
+  if (event === "PASSWORD_RECOVERY") {
+    closeModal(authModal);
+    passwordMessage.textContent = "";
+    passwordForm.reset();
+    openModal(passwordModal);
+  }
+});
 restoreSession();
