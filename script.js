@@ -34,9 +34,20 @@ const orderedFlagCatalog = [
 const completeFlagCatalog = [...flagCatalog, ...[
   ["af", "Afghanistan"], ["cl", "Chile"], ["kp", "Nordkorea"], ["ss", "Südsudan"], ["tt", "Trinidad und Tobago"], ["fm", "Mikronesien"], ["gb-eng", "England"], ["gb-sct", "Schottland"], ["gb-wls", "Wales"], ["gb-nir", "Nordirland"], ["sh-ta", "Tristan da Cunha"]
 ].map(([code, country]) => ({ code, country }))];
-const difficultyFlagGroups = Array.from({ length: 4 }, (_, difficultyIndex) => (
-  completeFlagCatalog.slice(difficultyIndex * 64, (difficultyIndex + 1) * 64)
-));
+// Die Reihenfolge innerhalb jeder Gruppe ist alphabetisch nach Ländernamen.
+// Diego Garcia und Tristan da Cunha werden bewusst nicht verwendet.
+const difficultyFlagCodes = [
+  "eg dz ar au bs be br bg cl cn cr dk de do ec gb-eng fi fr gh gr in id ie is il it jm jp ca co hr cu lu my mt ma mx nl nz ng no at pk pe ph pl pt ro ru gb-sct se ch rs sk es za kr th tr ua hu us gb vn".split(" "),
+  "af am az bd bb bz bj bt bo bw bn bf bi ci dj er fj ga gm ge gd gt gn ht hn ir iq ye jo kh cm cv kz qa ke kg ki kw la lb lr ly mg mw mv ml mu mn mz mm na np ni ne om pa pg py rw zm sn lk tz tn".split(" "),
+  "al et bh ba dm sv ee ao ag gq aw km cg cd xk ls lv lt li md kp mk tl ps pw ws sm sa sc sl zw sg si so sd ss sr sz sy tj tw tg tt td cz tm tv ug uy uz vu va ve ae gb-wls cf me kn vc gy gw lc by".split(" "),
+  "ax as vi ad ai aq bm bv vg io ck cw fk fo gf pf tf gi gl gp gu gg hm hk im je ky bq um cc mo mh mq mr yt fm mc ms nr nc nu gb-nir mp nf pn pr re bl mf sb st sx sj sh pm gs tk to tc wf cx eh cy".split(" ")
+];
+const flagsByCode = new Map([
+  ...completeFlagCatalog,
+  { code: "sc", country: "Seychellen" }
+].map((flag) => [flag.code, flag]));
+const difficultyFlagGroups = difficultyFlagCodes.map((codes) => codes.map((code) => flagsByCode.get(code)));
+const playableFlagCatalog = difficultyFlagGroups.flat();
 
 const flagImage = document.querySelector("#flag-image");
 const answersElement = document.querySelector("#answers");
@@ -86,12 +97,13 @@ function startLevel() {
   const difficultyIndex = Math.floor((level - 1) / LEVELS_PER_DIFFICULTY);
   const difficultyFlags = difficultyFlagGroups[difficultyIndex];
   const levelIndexWithinDifficulty = (level - 1) % LEVELS_PER_DIFFICULTY;
-  const levelFlags = shuffle(
-    difficultyFlags.slice(
-      levelIndexWithinDifficulty * QUESTIONS_PER_LEVEL,
-      (levelIndexWithinDifficulty + 1) * QUESTIONS_PER_LEVEL
-    )
-  );
+  const levelStart = levelIndexWithinDifficulty * QUESTIONS_PER_LEVEL;
+  const levelFlags = difficultyFlags.slice(levelStart, levelStart + QUESTIONS_PER_LEVEL);
+  // Schwer und Sehr schwer enthalten je 63 Flaggen. Für ihr letztes Level
+  // ergänzt eine zufällige Flagge aus dem ersten Level die achte Frage.
+  if (levelFlags.length < QUESTIONS_PER_LEVEL) {
+    levelFlags.push(shuffle(difficultyFlags.slice(0, QUESTIONS_PER_LEVEL))[0]);
+  }
   let previousOptions = [];
   levelQuestions = levelFlags.map((question, index) => {
     const options = getOptions(question, difficultyFlags, previousOptions, levelFlags[index + 1]);
@@ -120,12 +132,12 @@ function getOptions(question, optionPool, previousOptions = [], nextQuestion = n
 function startChallenge() {
   challengeMode = true;
   practiceMode = false;
-  const selectedQuestions = shuffle(completeFlagCatalog).slice(0, CHALLENGE_QUESTIONS);
+  const selectedQuestions = shuffle(playableFlagCatalog).slice(0, CHALLENGE_QUESTIONS);
   let previousOptions = [];
   challengeQuestions = selectedQuestions.map((question, index) => {
     const options = getOptions(
       question,
-      completeFlagCatalog,
+      playableFlagCatalog,
       previousOptions,
       selectedQuestions[index + 1],
       CHALLENGE_OPTIONS
@@ -277,6 +289,13 @@ async function showLevelResult() {
   resultMessage.textContent = passed
     ? "Alle acht Antworten waren richtig."
     : "Für den Aufstieg müssen alle acht Antworten richtig sein.";
+  restartButton.textContent = practiceMode ? "Zurück zum Profil ↗" : "Zum Profil gehen ↗";
+  nextLevelButton.classList.toggle("hidden", !passed || level >= MAX_LEVEL);
+  retryLevelButton.classList.toggle("hidden", challengeMode);
+  retryLevelButton.textContent = "Level noch einmal spielen ↗";
+
+  // Die Aktionen müssen sofort sichtbar sein, auch wenn das Speichern
+  // des Fortschritts oder das Laden der Rangliste länger dauert.
   if (authUser && !practiceMode) {
     currentUser.rounds += 1;
     if (passed) currentUser.highscore = Math.max(currentUser.highscore, level);
@@ -284,10 +303,6 @@ async function showLevelResult() {
     await saveCurrentUser(passed);
     await updateDashboard(false);
   }
-  restartButton.textContent = practiceMode ? "Zurück zum Profil ↗" : "Zum Profil gehen ↗";
-  nextLevelButton.classList.toggle("hidden", !passed || level >= MAX_LEVEL);
-  retryLevelButton.classList.toggle("hidden", challengeMode);
-  retryLevelButton.textContent = "Level noch einmal spielen ↗";
 }
 
 nextLevelButton.addEventListener("click", () => {
