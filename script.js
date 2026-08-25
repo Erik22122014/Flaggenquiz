@@ -1,5 +1,6 @@
 const LEVELS_PER_DIFFICULTY = 8;
-const MAX_LEVEL = LEVELS_PER_DIFFICULTY * 4;
+const FORWARD_MAX_LEVEL = LEVELS_PER_DIFFICULTY * 4;
+const MAX_LEVEL = FORWARD_MAX_LEVEL * 2;
 const QUESTIONS_PER_LEVEL = 8;
 const CHALLENGE_QUESTIONS = 20;
 const CHALLENGE_OPTIONS = 10;
@@ -48,9 +49,13 @@ const flagsByCode = new Map([
   { code: "sc", country: "Seychellen" }
 ].map((flag) => [flag.code, flag]));
 const difficultyFlagGroups = difficultyFlagCodes.map((codes) => shuffle(codes.map((code) => flagsByCode.get(code))));
+// Die Umkehrlevel erhalten eine eigene zufällige Reihenfolge innerhalb
+// derselben Schwierigkeit und sind damit nicht an das ursprüngliche Level gebunden.
+const reverseDifficultyFlagGroups = difficultyFlagGroups.map((flags) => shuffle(flags));
 const playableFlagCatalog = difficultyFlagGroups.flat();
 
 const flagImage = document.querySelector("#flag-image");
+const countryPrompt = document.querySelector("#country-prompt");
 const answersElement = document.querySelector("#answers");
 const scoreElement = document.querySelector("#score");
 const scoreLabel = document.querySelector("#score-label");
@@ -84,6 +89,7 @@ let challengeCorrect = 0;
 let challengeQuestionIndex = 0;
 let challengeStartedAt = 0;
 let challengeTimerId = null;
+let reverseMode = false;
 
 function shuffle(items) {
   return [...items].sort(() => Math.random() - 0.5);
@@ -95,9 +101,12 @@ function startLevel() {
   quizView.classList.remove("challenge-active");
   challengeTimer.classList.add("hidden");
   scoreLabel.textContent = "Level";
-  const difficultyIndex = Math.floor((level - 1) / LEVELS_PER_DIFFICULTY);
-  const difficultyFlags = difficultyFlagGroups[difficultyIndex];
-  const levelIndexWithinDifficulty = (level - 1) % LEVELS_PER_DIFFICULTY;
+  reverseMode = level > FORWARD_MAX_LEVEL;
+  quizView.classList.toggle("reverse-mode", reverseMode);
+  const sourceLevel = ((level - 1) % FORWARD_MAX_LEVEL) + 1;
+  const difficultyIndex = Math.floor((sourceLevel - 1) / LEVELS_PER_DIFFICULTY);
+  const difficultyFlags = (reverseMode ? reverseDifficultyFlagGroups : difficultyFlagGroups)[difficultyIndex];
+  const levelIndexWithinDifficulty = (sourceLevel - 1) % LEVELS_PER_DIFFICULTY;
   const levelStart = levelIndexWithinDifficulty * QUESTIONS_PER_LEVEL;
   const levelFlags = difficultyFlags.slice(levelStart, levelStart + QUESTIONS_PER_LEVEL);
   // Schwer und Sehr schwer enthalten je 63 Flaggen. Für ihr letztes Level
@@ -105,12 +114,7 @@ function startLevel() {
   if (levelFlags.length < QUESTIONS_PER_LEVEL) {
     levelFlags.push(shuffle(difficultyFlags.slice(0, QUESTIONS_PER_LEVEL))[0]);
   }
-  let previousOptions = [];
-  levelQuestions = levelFlags.map((question, index) => {
-    const options = getOptions(question, difficultyFlags, previousOptions, levelFlags[index + 1]);
-    previousOptions = options;
-    return { ...question, options };
-  });
+  levelQuestions = reverseMode ? createReverseQuestions(levelFlags) : createCountryQuestions(levelFlags, difficultyFlags);
   questionIndex = 0;
   levelFailed = false;
   renderQuestion();
@@ -130,9 +134,35 @@ function getOptions(question, optionPool, previousOptions = [], nextQuestion = n
   return shuffle([question.country, ...distractors]);
 }
 
+function createCountryQuestions(levelFlags, difficultyFlags) {
+  let previousOptions = [];
+  return levelFlags.map((question, index) => {
+    const options = getOptions(question, difficultyFlags, previousOptions, levelFlags[index + 1]);
+    previousOptions = options;
+    return { ...question, options };
+  });
+}
+
+function createReverseQuestions(levelFlags) {
+  let previousWrongCodes = [];
+  return shuffle(levelFlags).map((question) => {
+    const availableFlags = [...new Map(levelFlags.map((flag) => [flag.code, flag])).values()];
+    const wrongOptions = shuffle(availableFlags.filter((flag) => (
+      flag.code !== question.code && !previousWrongCodes.includes(flag.code)
+    ))).slice(0, 3);
+    const options = shuffle([question, ...wrongOptions]);
+    previousWrongCodes = wrongOptions.map((flag) => flag.code);
+    return { ...question, options };
+  });
+}
+
 function startChallenge() {
   challengeMode = true;
+  reverseMode = false;
   practiceMode = false;
+  quizView.classList.remove("reverse-mode");
+  flagImage.classList.remove("hidden");
+  countryPrompt.classList.add("hidden");
   const selectedQuestions = shuffle(playableFlagCatalog).slice(0, CHALLENGE_QUESTIONS);
   let previousOptions = [];
   challengeQuestions = selectedQuestions.map((question, index) => {
@@ -197,17 +227,23 @@ function renderChallengeQuestion() {
 function renderQuestion() {
   const question = levelQuestions[questionIndex];
   answered = false;
-  flagImage.src = `https://flagcdn.com/w640/${question.code}.png`;
-  flagImage.alt = "Flagge ohne Länderhinweis";
+  flagImage.classList.toggle("hidden", reverseMode);
+  countryPrompt.classList.toggle("hidden", !reverseMode);
+  if (reverseMode) {
+    countryPrompt.textContent = `Was ist die Flagge von ${question.country}?`;
+  } else {
+    flagImage.src = `https://flagcdn.com/w640/${question.code}.png`;
+    flagImage.alt = "Flagge ohne Länderhinweis";
+  }
   questionCount.textContent = `Frage ${String(questionIndex + 1).padStart(2, "0")} / ${QUESTIONS_PER_LEVEL}`;
   progressBar.style.width = `${((questionIndex + 1) / QUESTIONS_PER_LEVEL) * 100}%`;
   levelCount.textContent = `Level ${String(level).padStart(2, "0")} / ${MAX_LEVEL}`;
   scoreElement.textContent = String(level).padStart(2, "0");
-  difficultyElement.textContent = getDifficulty(level);
-  answersElement.innerHTML = shuffle(question.options).map((option, index) => `
-    <button class="answer-button" type="button" data-answer="${option}">
+  difficultyElement.textContent = reverseMode ? "Welche Flagge?" : getDifficulty(level);
+  answersElement.innerHTML = (reverseMode ? question.options : shuffle(question.options)).map((option, index) => `
+    <button class="answer-button" type="button" data-answer="${reverseMode ? option.code : option}">
       <span class="answer-number">0${index + 1}</span>
-      <span class="answer-text">${option}</span>
+      ${reverseMode ? `<img class="answer-flag" src="https://flagcdn.com/w160/${option.code}.png" alt="Flagge zur Auswahl">` : `<span class="answer-text">${option}</span>`}
       <span class="answer-arrow" aria-hidden="true">↗</span>
     </button>
   `).join("");
@@ -215,7 +251,8 @@ function renderQuestion() {
 }
 
 function getDifficulty(currentLevel) {
-  return ["Einfach", "Mittel", "Schwer", "Sehr schwer"][Math.floor((currentLevel - 1) / LEVELS_PER_DIFFICULTY)];
+  const sourceLevel = ((currentLevel - 1) % FORWARD_MAX_LEVEL) + 1;
+  return ["Einfach", "Mittel", "Schwer", "Sehr schwer"][Math.floor((sourceLevel - 1) / LEVELS_PER_DIFFICULTY)];
 }
 
 function chooseAnswer(button) {
@@ -229,7 +266,7 @@ function chooseAnswer(button) {
     return;
   }
   const question = levelQuestions[questionIndex];
-  if (button.dataset.answer !== question.country) levelFailed = true;
+  if (reverseMode ? button.dataset.answer !== question.code : button.dataset.answer !== question.country) levelFailed = true;
   answersElement.querySelectorAll(".answer-button").forEach((item) => { item.disabled = true; });
   window.setTimeout(nextQuestion, 280);
 }
